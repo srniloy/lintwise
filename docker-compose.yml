@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: lintwise
+      POSTGRES_PASSWORD: lintwise
+      POSTGRES_DB: lintwise
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lintwise"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://lintwise:lintwise@postgres:5432/lintwise
+      REDIS_URL: redis://redis:6379
+      FRONTEND_URL: http://localhost:5173
+      JWT_SECRET: ${JWT_SECRET:-changeme-32chars-replace-in-production!}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-changeme-32chars-replace-in-production!}
+      JWT_ACCESS_EXPIRY: ${JWT_ACCESS_EXPIRY:-7d}
+      JWT_REFRESH_EXPIRY: ${JWT_REFRESH_EXPIRY:-30d}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASS: ${MAIL_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:3000/api/v1
+
+volumes:
+  postgres_data:
+  redis_data:
