@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 
 import { AppController } from './app.controller';
@@ -11,6 +12,9 @@ import { envValidationSchema } from './config/env.validation';
 
 import { PrismaModule } from './prisma/prisma.module';
 import { CacheModule } from './cache/cache.module';
+import { MailModule } from './mail/mail.module';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -29,6 +33,16 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
       validationOptions: { abortEarly: false },
     }),
 
+    // ── Rate limiting (global) ────────────────────────────────────
+    ThrottlerModule.forRoot([
+      {
+        // Default: 100 requests per 15 minutes per IP
+        name: 'default',
+        ttl: 15 * 60 * 1000,
+        limit: 100,
+      },
+    ]),
+
     // ── JWT (global — consumed by JwtAuthGuard) ───────────────────
     JwtModule.registerAsync({
       global: true,
@@ -36,17 +50,19 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('jwt.secret') as string,
         signOptions: {
-          // Cast to 'any' — ConfigService returns string but jwt expects StringValue
           expiresIn: config.get<string>('jwt.accessExpiry', '7d') as any,
         },
       }),
     }),
 
-    // ── Database ──────────────────────────────────────────────────
+    // ── Infrastructure ────────────────────────────────────────────
     PrismaModule,
-
-    // ── Cache ─────────────────────────────────────────────────────
     CacheModule,
+
+    // ── Features ─────────────────────────────────────────────────
+    MailModule,
+    AuthModule,
+    UsersModule,
   ],
 
   controllers: [AppController],

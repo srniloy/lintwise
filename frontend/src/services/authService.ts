@@ -21,6 +21,12 @@ export const authService = {
   resetPassword: (token: string, password: string) =>
     api.post<{ message: string }>('/auth/reset-password', { token, password }),
 
+  verifyEmail: (token: string) =>
+    api.get<{ message: string }>(`/auth/verify-email?token=${token}`),
+
+  resendVerification: (email: string) =>
+    api.post<{ message: string }>('/auth/resend-verification', { email }),
+
   getProfile: () => api.get<User>('/users/profile'),
 
   updateProfile: (data: Partial<Pick<User, 'name' | 'avatarUrl'>>) =>
