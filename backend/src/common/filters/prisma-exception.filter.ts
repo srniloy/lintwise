@@ -1,5 +1,5 @@
 import { ExceptionFilter, Catch, ArgumentsHost, Logger } from '@nestjs/common';
-import { Prisma, PrismaClientKnownRequestError } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import type { Response } from 'express';
 
 const PRISMA_ERROR_MAP: Record<string, { status: number; message: string }> = {
