@@ -1,4 +1,5 @@
 export type * from './auth'
+export type * from './review'
 
 export interface ApiError {
   message: string
