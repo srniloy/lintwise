@@ -1,6 +1,6 @@
 # LintWise Backend — Step-by-Step Build Plan
 
-**Stack:** NestJS 11, TypeScript, Prisma ORM, PostgreSQL, Redis, JWT, Claude API  
+**Stack:** NestJS 11, TypeScript, Prisma ORM, PostgreSQL, Redis, JWT, Gemini API  
 **Testing:** Jest + @nestjs/testing + Supertest (unit + e2e after every step)  
 **Source:** LintWise-Requirements-Summary.md + LintWiseTest.md  
 **Rule:** Complete one step, run tests, confirm passing — then move to the next.
@@ -525,33 +525,33 @@ npm run test && npm run test:e2e
 
 ## PHASE 3 — Core Code Review (FR2) — CRITICAL
 
-### Step 9: Claude AI Service
+### Step 9: Gemini AI Service
 
 **Install packages:**
 ```bash
-npm install @anthropic-ai/sdk
+npm install @google/generative-ai
 ```
 
 **What to build:**
-- `src/claude/claude.module.ts`
-- `src/claude/claude.service.ts`:
+- `src/gemini/gemini.module.ts`
+- `src/gemini/gemini.service.ts`:
   - `analyzeCode(code, language, title?)` → structured review result
-  - Build system prompt: instructs Claude to return JSON with `{ overallScore, summary, issues[] }`
+  - Build system prompt: instructs Gemini to return JSON with `{ overallScore, summary, issues[] }`
   - Each issue: `{ category, severity, title, description, suggestion, lineStart, lineEnd, fileName }`
   - Use prompt caching (`cache_control`) for the system prompt
-  - Handle Claude API errors gracefully (rate limit, timeout, network)
+  - Handle Gemini API errors gracefully (rate limit, timeout, network)
   - Retry logic: 3 attempts with exponential backoff
-- `src/claude/claude.types.ts` — typed interfaces for the Claude response
+- `src/gemini/gemini.types.ts` — typed interfaces for the Gemini response
 
 **Tests to write & run:**
 ```
-src/claude/claude.service.spec.ts
-  ← test: analyzeCode() calls Anthropic SDK with correct model + prompt
+src/gemini/gemini.service.spec.ts
+  ← test: analyzeCode() calls Gemini SDK with correct model + prompt
   ← test: analyzeCode() parses structured JSON response correctly
   ← test: analyzeCode() retries on transient error (3x)
   ← test: analyzeCode() throws ServiceUnavailableException after 3 failures
   ← test: analyzeCode() uses prompt caching header
-  (mock Anthropic SDK — do NOT call real API in tests)
+  (mock Gemini SDK — do NOT call real API in tests)
 ```
 ```bash
 npm run test
@@ -565,7 +565,7 @@ npm run test
 - `src/reviews/reviews.module.ts`
 - `src/reviews/reviews.service.ts`:
   - `create(userId, dto)` — validate code size (<50,000 chars, <10,000 lines), create Review (PENDING), trigger async processing
-  - `processReview(reviewId)` — set PROCESSING, call ClaudeService, parse + save Issues, set COMPLETED; on error → FAILED
+  - `processReview(reviewId)` — set PROCESSING, call GeminiService, parse + save Issues, set COMPLETED; on error → FAILED
   - `findOne(reviewId, userId)` — verify ownership
   - `getStatus(reviewId, userId)` — returns `{ id, status, createdAt }`
 - `src/reviews/reviews.controller.ts`:
@@ -581,8 +581,8 @@ src/reviews/reviews.service.spec.ts
   ← test: create() throws 400 if code > 50,000 chars
   ← test: create() throws 400 if > 5 files
   ← test: processReview() sets status PROCESSING then COMPLETED
-  ← test: processReview() saves Issues from Claude response
-  ← test: processReview() sets FAILED if Claude throws
+  ← test: processReview() saves Issues from Gemini response
+  ← test: processReview() sets FAILED if Gemini throws
 
 test/reviews.e2e-spec.ts (Supertest)
   ← POST /api/v1/reviews no token → 401
@@ -1055,8 +1055,8 @@ npm install @nestjs/terminus
 - `src/health/health.module.ts`
 - `src/health/health.controller.ts`:
   - `GET /health` — `@Public()`
-  - Checks: PostgreSQL (PrismaHealthIndicator), Redis (custom ping), Claude API (HTTP ping to Anthropic)
-  - Returns: `{ status, checks: { db, redis, claudeApi }, uptime, timestamp }`
+  - Checks: PostgreSQL (PrismaHealthIndicator), Redis (custom ping), Gemini API (HTTP ping to Gemini)
+  - Returns: `{ status, checks: { db, redis, geminiApi }, uptime, timestamp }`
 
 **Tests to write & run:**
 ```
@@ -1125,7 +1125,7 @@ npm run lint
 | 6 | Email verification | FR1.1 | Auth | HIGH |
 | 7 | Password reset | FR1.3 | Auth | HIGH |
 | 8 | Profile management + rate limiting | FR1.4, NFR2 | Auth | MEDIUM |
-| 9 | Claude AI service | FR2 | Code Review | CRITICAL |
+| 9 | Gemini AI service | FR2 | Code Review | CRITICAL |
 | 10 | Reviews: submit + status tracking | FR2.1,2.2 | Code Review | CRITICAL |
 | 11 | Reviews: results + history + filters | FR2.3,2.4,2.5 | Code Review | CRITICAL |
 | 12 | Export (PDF/JSON/MD/CSV) | FR5.1 | Export | HIGH |

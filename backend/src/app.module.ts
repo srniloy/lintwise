@@ -15,6 +15,8 @@ import { CacheModule } from './cache/cache.module';
 import { MailModule } from './mail/mail.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { ClaudeModule } from './claude/claude.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -63,6 +65,8 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
     MailModule,
     AuthModule,
     UsersModule,
+    ClaudeModule,
+    ReviewsModule,
   ],
 
   controllers: [AppController],
