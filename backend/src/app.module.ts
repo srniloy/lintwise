@@ -15,7 +15,7 @@ import { CacheModule } from './cache/cache.module';
 import { MailModule } from './mail/mail.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { ClaudeModule } from './claude/claude.module';
+import { GeminiModule } from './gemini/gemini.module';
 import { ReviewsModule } from './reviews/reviews.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -65,7 +65,7 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
     MailModule,
     AuthModule,
     UsersModule,
-    ClaudeModule,
+    GeminiModule,
     ReviewsModule,
   ],
 

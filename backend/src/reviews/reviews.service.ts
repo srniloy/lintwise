@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { ClaudeService } from '../claude/claude.service';
+import { GeminiService } from '../gemini/gemini.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import type { Review } from '@prisma/client';
 
@@ -16,7 +16,7 @@ export class ReviewsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly claude: ClaudeService,
+    private readonly gemini: GeminiService,
   ) {}
 
   // ── Create ────────────────────────────────────────────────────────────────
@@ -58,7 +58,7 @@ export class ReviewsService {
     });
 
     try {
-      const result = await this.claude.analyzeCode(
+      const result = await this.gemini.analyzeCode(
         review.code,
         review.language,
         review.title ?? undefined,
