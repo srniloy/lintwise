@@ -1,6 +1,6 @@
 # LintWise - AI-Powered Code Review Tool
 
-LintWise is an intelligent code review platform powered by Claude AI. It provides instant, comprehensive code analysis across 50+ programming languages — helping developers catch security issues, performance problems, and style violations before committing code.
+LintWise is an intelligent code review platform powered by Gemini AI. It provides instant, comprehensive code analysis across 50+ programming languages — helping developers catch security issues, performance problems, and style violations before committing code.
 
 ---
 
@@ -13,7 +13,7 @@ LintWise is an intelligent code review platform powered by Claude AI. It provide
 | Database | PostgreSQL 15+ |
 | Cache | Redis 7+ |
 | Auth | JWT (access: 7d, refresh: 30d), bcrypt |
-| AI | Claude API (Anthropic) |
+| AI | Gemini API (@google/genai) |
 | DevOps | Docker, Docker Compose, GitHub Actions |
 
 ---
@@ -35,7 +35,7 @@ NestJS Backend (Controllers → Services → Guards)
         │
    ┌────┼────────────┐
    ▼    ▼            ▼
-PostgreSQL  Redis    Claude API
+PostgreSQL  Redis    Gemini API
 (data)      (cache,  (AI analysis)
              sessions)
 ```
@@ -43,7 +43,7 @@ PostgreSQL  Redis    Claude API
 **Code Review Flow:**
 1. User submits code via React frontend
 2. Backend stores code in PostgreSQL and queues in Redis
-3. Worker calls Claude API for analysis
+3. Worker calls Gemini API for analysis
 4. Results stored and returned to frontend
 
 **Design Patterns:** MVC, Dependency Injection, Repository, Guard, Interceptor
@@ -85,9 +85,9 @@ REDIS_PORT=6379
 JWT_SECRET=your_super_secret_jwt_key_change_in_production
 JWT_EXPIRATION=7d
 REFRESH_TOKEN_EXPIRATION=30d
-CLAUDE_API_KEY=sk-ant-xxxx
-CLAUDE_MODEL=claude-sonnet-4-6
-CLAUDE_MAX_TOKENS=2000
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.0-flash
+GEMINI_MAX_TOKENS=2000
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
 CORS_ORIGIN=http://localhost:5173

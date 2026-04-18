@@ -555,13 +555,13 @@ module.exports = {
 import { Test, TestingModule } from '@nestjs/testing'
 import { ReviewsService } from './reviews.service'
 import { PrismaService } from '../common/services/prisma.service'
-import { ClaudeService } from '../services/claude.service'
+import { GeminiService } from '../services/gemini.service'
 import { CacheService } from '../services/cache.service'
 
 describe('ReviewsService', () => {
   let service: ReviewsService
   let prisma: PrismaService
-  let claude: ClaudeService
+  let gemini: GeminiService
   let cache: CacheService
 
   beforeEach(async () => {
@@ -584,7 +584,7 @@ describe('ReviewsService', () => {
           },
         },
         {
-          provide: ClaudeService,
+          provide: GeminiService,
           useValue: {
             analyzeCode: jest.fn(),
           },
@@ -602,7 +602,7 @@ describe('ReviewsService', () => {
 
     service = module.get<ReviewsService>(ReviewsService)
     prisma = module.get<PrismaService>(PrismaService)
-    claude = module.get<ClaudeService>(ClaudeService)
+    gemini = module.get<GeminiService>(GeminiService)
     cache = module.get<CacheService>(CacheService)
   })
 
@@ -708,29 +708,29 @@ describe('ReviewsService', () => {
   })
 
   describe('analyzeCode', () => {
-    it('should analyze code using Claude API', async () => {
+    it('should analyze code using Gemini API', async () => {
       const mockAnalysis = {
         overallScore: 85,
         issues: [],
         summary: 'Good code',
       }
 
-      jest.spyOn(claude, 'analyzeCode').mockResolvedValue(mockAnalysis)
+      jest.spyOn(gemini, 'analyzeCode').mockResolvedValue(mockAnalysis)
 
       const result = await service.analyzeCode('const x = 1;', 'JAVASCRIPT')
 
       expect(result).toEqual(mockAnalysis)
-      expect(claude.analyzeCode).toHaveBeenCalledWith('const x = 1;', 'JAVASCRIPT')
+      expect(gemini.analyzeCode).toHaveBeenCalledWith('const x = 1;', 'JAVASCRIPT')
     })
 
-    it('should handle Claude API errors', async () => {
-      jest.spyOn(claude, 'analyzeCode').mockRejectedValue(
-        new Error('Claude API error')
+    it('should handle Gemini API errors', async () => {
+      jest.spyOn(gemini, 'analyzeCode').mockRejectedValue(
+        new Error('Gemini API error')
       )
 
       await expect(
         service.analyzeCode('const x = 1;', 'JAVASCRIPT')
-      ).rejects.toThrow('Claude API error')
+      ).rejects.toThrow('Gemini API error')
     })
   })
 

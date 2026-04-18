@@ -244,7 +244,7 @@ Build the primitive components used everywhere before building pages:
 - Route: `/admin` (ADMIN role only)
 - **User Management** — table of all users, search, filter by role
   - Actions: change role, suspend account, delete account
-- **System Health** — live status of DB, Redis, Claude API (FR8.1)
+- **System Health** — live status of DB, Redis, Gemini API (FR8.1)
 - **Review Stats** — platform-wide totals (daily reviews, active users)
 - **Rate Limit Monitor** — usage per user tier
 

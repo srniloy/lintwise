@@ -131,7 +131,7 @@ This document provides a comprehensive overview of all functional and non-functi
 **Key Acceptance Criteria:**
 - Database connectivity check
 - Redis connectivity check
-- Claude API availability check
+- Gemini API availability check
 - System uptime metrics
 
 ---
@@ -424,7 +424,7 @@ NFR4.2 (Data Protection)
 
 | Requirement | Risk | Mitigation |
 |-------------|------|-----------|
-| **FR2 (Code Review)** | Claude API dependency | Have fallback mechanism, implement retry logic |
+| **FR2 (Code Review)** | Gemini API dependency | Have fallback mechanism, implement retry logic |
 | **NFR1.1 (Performance)** | High concurrent users | Load testing, auto-scaling, caching |
 | **NFR3.1 (Availability)** | Single point of failure | Multi-region deployment, redundancy |
 | **NFR4.2 (Data Protection)** | Security breach | Encryption, access control, auditing |
@@ -435,7 +435,7 @@ NFR4.2 (Data Protection)
 ## Dependencies & Assumptions
 
 ### External Dependencies
-1. **Claude API** - Anthropic (code analysis)
+1. **Gemini API** - Google (@google/genai) (code analysis)
 2. **AWS Services** - EC2, RDS, S3, CloudFront
 3. **Email Service** - SendGrid or AWS SES
 4. **Payment Processor** - Stripe (premium subscriptions)
@@ -443,7 +443,7 @@ NFR4.2 (Data Protection)
 ### Assumptions
 1. Users have internet connectivity
 2. Modern browser support sufficient
-3. Claude API 99.5% availability
+3. Gemini API 99.5% availability
 4. AWS services available in all regions
 5. Team size: 5-8 developers
 6. 2-week sprint cycles
