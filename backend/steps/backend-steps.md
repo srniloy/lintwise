@@ -526,11 +526,9 @@ npm run test && npm run test:e2e
 ## PHASE 3 — Core Code Review (FR2) — CRITICAL
 
 ### Step 9: Gemini AI Service
-### Step 9: Gemini AI Service
 
 **Install packages:**
 ```bash
-npm install @google/generative-ai
 npm install @google/genai
 ```
 

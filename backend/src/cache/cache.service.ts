@@ -86,4 +86,11 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     const count = await this.client.exists(key);
     return count > 0;
   }
+
+  async deletePattern(pattern: string): Promise<void> {
+    const keys = await this.client.keys(pattern);
+    if (keys.length > 0) {
+      await this.client.del(...keys);
+    }
+  }
 }

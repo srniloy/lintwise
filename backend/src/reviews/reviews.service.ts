@@ -7,8 +7,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GeminiService } from '../gemini/gemini.service';
+import { CacheService, TTL } from '../cache/cache.service';
 import { CreateReviewDto } from './dto/create-review.dto';
-import type { Review } from '@prisma/client';
+import { ReviewFilterDto } from './dto/review-filter.dto';
+import type { Review, Issue } from '@prisma/client';
 
 @Injectable()
 export class ReviewsService {
@@ -17,6 +19,7 @@ export class ReviewsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly gemini: GeminiService,
+    private readonly cache: CacheService,
   ) {}
 
   // ── Create ────────────────────────────────────────────────────────────────
@@ -100,6 +103,50 @@ export class ReviewsService {
     }
   }
 
+  // ── List ──────────────────────────────────────────────────────────────────
+
+  async findAllByUser(
+    userId: string,
+    dto: ReviewFilterDto,
+  ): Promise<{ reviews: Review[]; total: number; page: number; limit: number }> {
+    const { page = 1, limit = 10, status, language, startDate, endDate, search } = dto;
+    const skip = (page - 1) * limit;
+
+    const where: Record<string, unknown> = { userId };
+
+    if (status) where.status = status;
+
+    if (language) {
+      where.language = { contains: language, mode: 'insensitive' };
+    }
+
+    if (startDate || endDate) {
+      const createdAt: Record<string, Date> = {};
+      if (startDate) createdAt.gte = new Date(startDate);
+      if (endDate) createdAt.lte = new Date(endDate);
+      where.createdAt = createdAt;
+    }
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { language: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const [reviews, total] = await Promise.all([
+      this.prisma.review.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.review.count({ where }),
+    ]);
+
+    return { reviews, total, page, limit };
+  }
+
   // ── Read ──────────────────────────────────────────────────────────────────
 
   async getStatus(
@@ -117,14 +164,53 @@ export class ReviewsService {
     return { id: review.id, status: review.status, createdAt: review.createdAt, updatedAt: review.updatedAt };
   }
 
-  async findOne(reviewId: string, userId: string): Promise<Review> {
+  async findOne(
+    reviewId: string,
+    userId: string,
+  ): Promise<Review & { issues: Issue[] }> {
     const review = await this.prisma.review.findUnique({
       where: { id: reviewId },
+      include: { issues: true },
     });
 
     if (!review) throw new NotFoundException('Review not found');
     if (review.userId !== userId) throw new ForbiddenException('Access denied');
 
     return review;
+  }
+
+  async getFullResult(
+    reviewId: string,
+    userId: string,
+  ): Promise<Review & { issues: Issue[] }> {
+    const cacheKey = `review:result:${reviewId}`;
+    const cached = await this.cache.get<Review & { issues: Issue[] }>(cacheKey);
+    if (cached) return cached;
+
+    const review = await this.prisma.review.findUnique({
+      where: { id: reviewId },
+      include: { issues: true },
+    });
+
+    if (!review) throw new NotFoundException('Review not found');
+    if (review.userId !== userId) throw new ForbiddenException('Access denied');
+
+    await this.cache.set(cacheKey, review, TTL.REVIEW);
+    return review;
+  }
+
+  // ── Delete ────────────────────────────────────────────────────────────────
+
+  async delete(reviewId: string, userId: string): Promise<void> {
+    const review = await this.prisma.review.findUnique({
+      where: { id: reviewId },
+      select: { id: true, userId: true },
+    });
+
+    if (!review) throw new NotFoundException('Review not found');
+    if (review.userId !== userId) throw new ForbiddenException('Access denied');
+
+    await this.prisma.review.delete({ where: { id: reviewId } });
+    await this.cache.del(`review:result:${reviewId}`);
   }
 }
