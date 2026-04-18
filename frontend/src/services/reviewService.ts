@@ -1,5 +1,11 @@
 import { api } from './apiClient'
-import type { Review, CreateReviewDto } from '@/types/review'
+import type { Review, ReviewStatus, CreateReviewDto } from '@/types/review'
+
+export interface ReviewStatusResponse {
+  id: string
+  status: ReviewStatus
+  createdAt: string
+}
 
 export const reviewService = {
   create: (dto: CreateReviewDto) =>
@@ -7,6 +13,9 @@ export const reviewService = {
 
   getById: (id: string) =>
     api.get<Review>(`/reviews/${id}`),
+
+  getStatus: (id: string) =>
+    api.get<ReviewStatusResponse>(`/reviews/${id}/status`),
 
   list: (params?: { page?: number; limit?: number; status?: string; language?: string }) => {
     const query = new URLSearchParams()
