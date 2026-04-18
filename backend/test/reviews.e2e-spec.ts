@@ -434,4 +434,100 @@ describe('Reviews (e2e)', () => {
         .expect(404);
     });
   });
+
+  // ── GET /api/v1/reviews/:id/export ───────────────────────────────────────
+
+  describe('GET /api/v1/reviews/:id/export', () => {
+    const completedReview = () =>
+      makeReview({
+        status: 'COMPLETED',
+        overallScore: 85,
+        summary: 'Looks good.',
+        issues: [
+          {
+            id: 'issue-1',
+            reviewId: REVIEW_ID,
+            category: 'SECURITY',
+            severity: 'HIGH',
+            title: 'SQL injection risk',
+            description: 'Unsanitized input',
+            suggestion: 'Use parameterized queries',
+            lineStart: 5,
+            lineEnd: 7,
+            fileName: 'db.ts',
+            createdAt: new Date('2024-01-15T10:00:00Z'),
+          },
+        ],
+      });
+
+    it('returns 401 when no token is provided', () => {
+      return request(app.getHttpServer())
+        .get(`/api/v1/reviews/${REVIEW_ID}/export?format=json`)
+        .expect(401);
+    });
+
+    it('returns 400 for an invalid format value', async () => {
+      mockPrisma.review.findUnique.mockResolvedValue(completedReview());
+
+      return request(app.getHttpServer())
+        .get(`/api/v1/reviews/${REVIEW_ID}/export?format=xml`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(400);
+    });
+
+    it('returns 200 application/json for format=json', async () => {
+      mockPrisma.review.findUnique.mockResolvedValue(completedReview());
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/reviews/${REVIEW_ID}/export?format=json`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+
+      expect(res.headers['content-type']).toMatch(/application\/json/);
+      expect(res.headers['content-disposition']).toMatch(/attachment/);
+      const body = JSON.parse(res.text);
+      expect(body.id).toBe(REVIEW_ID);
+      expect(body.issues).toHaveLength(1);
+    });
+
+    it('returns 200 text/markdown for format=markdown', async () => {
+      mockPrisma.review.findUnique.mockResolvedValue(completedReview());
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/reviews/${REVIEW_ID}/export?format=markdown`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+
+      expect(res.headers['content-type']).toMatch(/text\/markdown/);
+      expect(res.headers['content-disposition']).toMatch(/attachment/);
+      expect(res.text).toContain('SQL injection risk');
+    });
+
+    it('returns 200 text/csv for format=csv', async () => {
+      mockPrisma.review.findUnique.mockResolvedValue(completedReview());
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/reviews/${REVIEW_ID}/export?format=csv`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+
+      expect(res.headers['content-type']).toMatch(/text\/csv/);
+      expect(res.headers['content-disposition']).toMatch(/attachment/);
+      expect(res.text).toContain('SECURITY');
+    });
+
+    it('returns 200 application/pdf for format=pdf', async () => {
+      mockPrisma.review.findUnique.mockResolvedValue(completedReview());
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/reviews/${REVIEW_ID}/export?format=pdf`)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .expect(200);
+
+      expect(res.headers['content-type']).toMatch(/application\/pdf/);
+      expect(res.headers['content-disposition']).toMatch(/attachment/);
+      // PDF magic bytes
+      expect(res.body.slice(0, 4).toString()).toBe('%PDF');
+    });
+  });
 });
