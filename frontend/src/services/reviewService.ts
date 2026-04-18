@@ -17,6 +17,9 @@ export const reviewService = {
   getStatus: (id: string) =>
     api.get<ReviewStatusResponse>(`/reviews/${id}/status`),
 
+  deleteById: (id: string) =>
+    api.delete<void>(`/reviews/${id}`),
+
   list: (params?: { page?: number; limit?: number; status?: string; language?: string }) => {
     const query = new URLSearchParams()
     if (params?.page)     query.set('page',     String(params.page))
