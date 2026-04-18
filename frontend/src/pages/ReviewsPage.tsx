@@ -53,24 +53,24 @@ type SortDir = 'asc' | 'desc'
 // ── Status metadata ───────────────────────────────────────────────────────────
 
 const STATUS_BADGE: Record<ReviewStatus, BadgeProps['variant']> = {
-  PENDING:    'secondary',
+  PENDING: 'secondary',
   PROCESSING: 'default',
-  COMPLETED:  'success',
-  FAILED:     'critical',
+  COMPLETED: 'success',
+  FAILED: 'critical',
 }
 
 const STATUS_LABEL: Record<ReviewStatus, string> = {
-  PENDING:    'Pending',
+  PENDING: 'Pending',
   PROCESSING: 'Processing',
-  COMPLETED:  'Completed',
-  FAILED:     'Failed',
+  COMPLETED: 'Completed',
+  FAILED: 'Failed',
 }
 
 const STATUS_ICON: Record<ReviewStatus, React.ReactNode> = {
-  PENDING:    <Clock className="h-3 w-3" />,
+  PENDING: <Clock className="h-3 w-3" />,
   PROCESSING: <Loader2 className="h-3 w-3 animate-spin" />,
-  COMPLETED:  <CheckCircle2 className="h-3 w-3" />,
-  FAILED:     <AlertCircle className="h-3 w-3" />,
+  COMPLETED: <CheckCircle2 className="h-3 w-3" />,
+  FAILED: <AlertCircle className="h-3 w-3" />,
 }
 
 // ── Grade helpers ─────────────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ function formatRelativeDate(dateStr: string): string {
 
   if (diffDays === 0) return 'Today'
   if (diffDays === 1) return 'Yesterday'
-  if (diffDays < 7)  return `${diffDays}d ago`
+  if (diffDays < 7) return `${diffDays}d ago`
   if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`
   return date.toLocaleDateString(undefined, {
     month: 'short',
@@ -149,8 +149,8 @@ interface ReviewRowProps {
 
 function ReviewRow({ review, selected, selectable, onSelect, onNavigate, onDelete }: ReviewRowProps) {
   const issueCount = review.issues?.length
-  const score      = review.overallScore
-  const grade      = score != null ? getGrade(score) : null
+  const score = review.overallScore
+  const grade = score != null ? getGrade(score) : null
 
   function handleCheckbox(e: React.MouseEvent) {
     e.stopPropagation()
@@ -282,7 +282,7 @@ function Pagination({
   if (totalPages <= 1) return null
 
   const from = (page - 1) * pageSize + 1
-  const to   = Math.min(page * pageSize, total)
+  const to = Math.min(page * pageSize, total)
 
   // Build page number list with ellipsis
   const pages: (number | '…')[] = []
@@ -367,9 +367,9 @@ function CompareModal({
     const issueCount = review.issues?.length ?? 0
     const severities: { label: string; key: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'; color: string }[] = [
       { label: 'Critical', key: 'CRITICAL', color: 'text-destructive' },
-      { label: 'High',     key: 'HIGH',     color: 'text-orange-500'  },
-      { label: 'Medium',   key: 'MEDIUM',   color: 'text-yellow-500'  },
-      { label: 'Low',      key: 'LOW',      color: 'text-blue-500'    },
+      { label: 'High', key: 'HIGH', color: 'text-orange-500' },
+      { label: 'Medium', key: 'MEDIUM', color: 'text-yellow-500' },
+      { label: 'Low', key: 'LOW', color: 'text-blue-500' },
     ]
 
     return (
@@ -525,24 +525,24 @@ export default function ReviewsPage() {
 
   // ── Data ──────────────────────────────────────────────────────────────────
   const [allReviews, setAllReviews] = useState<Review[]>([])
-  const [loading, setLoading]       = useState(true)
-  const [error, setError]           = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   // ── Filters ───────────────────────────────────────────────────────────────
-  const [searchRaw, setSearchRaw]         = useState('')
-  const [search, setSearch]               = useState('')
-  const [statusFilter, setStatusFilter]   = useState<ReviewStatus | 'ALL'>('ALL')
-  const [langFilter, setLangFilter]       = useState('ALL')
-  const [dateRange, setDateRange]         = useState<DateRange>('all')
-  const [sortKey, setSortKey]             = useState<SortKey>('date')
-  const [sortDir, setSortDir]             = useState<SortDir>('desc')
+  const [searchRaw, setSearchRaw] = useState('')
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<ReviewStatus | 'ALL'>('ALL')
+  const [langFilter, setLangFilter] = useState('ALL')
+  const [dateRange, setDateRange] = useState<DateRange>('all')
+  const [sortKey, setSortKey] = useState<SortKey>('date')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
 
   // ── Pagination ────────────────────────────────────────────────────────────
   const [page, setPage] = useState(1)
 
   // ── Selection & comparison ────────────────────────────────────────────────
-  const [selected, setSelected]         = useState<Set<string>>(new Set())
-  const [compareOpen, setCompareOpen]   = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [compareOpen, setCompareOpen] = useState(false)
 
   // ── Delete ────────────────────────────────────────────────────────────────
   const [deleteTarget, setDeleteTarget] = useState<Review | null>(null)
@@ -563,7 +563,7 @@ export default function ReviewsPage() {
     setLoading(true)
     reviewService
       .list({ limit: FETCH_LIMIT })
-      .then((res) => { setAllReviews(res.data); setLoading(false) })
+      .then((res) => { setAllReviews(res.reviews); setLoading(false) })
       .catch((err: { message?: string }) => {
         setError(err?.message ?? 'Failed to load reviews')
         setLoading(false)
@@ -575,11 +575,11 @@ export default function ReviewsPage() {
   // ── Derived: available languages ──────────────────────────────────────────
   const availableLanguages = useMemo(() => {
     const seen = new Set<string>()
-    allReviews.forEach((r) => seen.add(r.language))
+    allReviews?.forEach((r) => seen.add(r.language))
     return Array.from(seen).sort()
   }, [allReviews])
 
-  // ── Derived: filtered + sorted + paginated ────────────────────────────────
+  // ── Derived: filtered + sorted + paginated ─────────────────────────────────
   const filteredReviews = useMemo(() => {
     const cutoff = cutoffDate(dateRange)
     const q = search.trim().toLowerCase()
@@ -591,7 +591,7 @@ export default function ReviewsPage() {
         if (cutoff && new Date(r.createdAt) < cutoff) return false
         if (q) {
           const titleMatch = r.title?.toLowerCase().includes(q)
-          const langMatch  = r.language.toLowerCase().includes(q)
+          const langMatch = r.language.toLowerCase().includes(q)
           if (!titleMatch && !langMatch) return false
         }
         return true
@@ -609,9 +609,9 @@ export default function ReviewsPage() {
       })
   }, [allReviews, statusFilter, langFilter, dateRange, search, sortKey, sortDir])
 
-  const totalPages      = Math.max(1, Math.ceil(filteredReviews.length / PAGE_SIZE))
-  const safePage        = Math.min(page, totalPages)
-  const pagedReviews    = filteredReviews.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+  const totalPages = Math.max(1, Math.ceil(filteredReviews.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const pagedReviews = filteredReviews.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
   function handleFilterChange<T>(setter: (v: T) => void, val: T) {
     setter(val)

@@ -28,7 +28,7 @@ export const reviewService = {
     if (params?.language) query.set('language', params.language)
     if (params?.search)   query.set('search',   params.search)
     const qs = query.toString()
-    return api.get<{ data: Review[]; total: number; page: number; totalPages: number }>(
+    return api.get<{ reviews: Review[]; total: number; page: number; limit: number }>(
       `/reviews${qs ? `?${qs}` : ''}`,
     )
   },
