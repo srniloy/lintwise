@@ -45,7 +45,17 @@ async function request<T>(
 
   if (res.status === 204) return undefined as T
 
-  return res.json() as Promise<T>
+  const json = (await res.json()) as { status: string; data: T } | T
+  // Unwrap the backend's standard { status, data } envelope
+  if (
+    json !== null &&
+    typeof json === 'object' &&
+    'status' in json &&
+    'data' in json
+  ) {
+    return (json as { status: string; data: T }).data
+  }
+  return json as T
 }
 
 export const api = {

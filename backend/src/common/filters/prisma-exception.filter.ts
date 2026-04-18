@@ -1,5 +1,5 @@
 import { ExceptionFilter, Catch, ArgumentsHost, Logger } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import type { Response } from 'express';
 
 const PRISMA_ERROR_MAP: Record<string, { status: number; message: string }> = {
@@ -13,12 +13,12 @@ const PRISMA_ERROR_MAP: Record<string, { status: number; message: string }> = {
   P2011: { status: 400, message: 'Required field is missing' },
 };
 
-@Catch(Prisma.PrismaClientKnownRequestError)
+@Catch(PrismaClientKnownRequestError)
 export class PrismaExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(PrismaExceptionFilter.name);
 
   catch(
-    exception: Prisma.PrismaClientKnownRequestError,
+    exception: PrismaClientKnownRequestError,
     host: ArgumentsHost,
   ): void {
     const ctx = host.switchToHttp();

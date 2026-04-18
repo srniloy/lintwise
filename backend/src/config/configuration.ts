@@ -18,8 +18,8 @@ export default () => ({
     url: process.env.REDIS_URL,
   },
 
-  claude: {
-    apiKey: process.env.CLAUDE_API_KEY,
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY,
   },
 
   mail: {

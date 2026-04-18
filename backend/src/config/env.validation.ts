@@ -15,7 +15,7 @@ export const envValidationSchema = Joi.object({
 
   // REDIS_URL: Joi.string().required(),
 
-  // CLAUDE_API_KEY: Joi.string().required(),
+  GEMINI_API_KEY: Joi.string().required(),
 
   // FRONTEND_URL: Joi.string().required(),
 

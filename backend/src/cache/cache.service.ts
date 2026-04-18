@@ -28,15 +28,30 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit(): void {
     const redisUrl = this.config.get<string>('redis.url', 'redis://localhost:6379');
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
+
     this.client = new Redis(redisUrl, {
       lazyConnect: true,
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: 1,
+      retryStrategy: () => {
+        if (retryCount >= MAX_RETRIES) return null;
+        retryCount++;
+        return 2000 * retryCount;
+      },
+      enableOfflineQueue: false,
     });
 
-    this.client.on('connect', () => this.logger.log('Redis connected'));
-    this.client.on('error', (err: Error) =>
-      this.logger.error('Redis error', err.message),
-    );
+    this.client.on('connect', () => {
+      retryCount = 0;
+      this.logger.log('Redis connected');
+    });
+
+    this.client.on('error', (err: Error) => {
+      if (retryCount <= 1) {
+        this.logger.warn(`Redis unavailable — caching disabled (${err.message})`);
+      }
+    });
   }
 
   async onModuleDestroy(): Promise<void> {
