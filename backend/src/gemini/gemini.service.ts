@@ -13,12 +13,9 @@ const MAX_DELAY_MS = 30000;
 
 // ✅ CORRECT MODEL NAMES for @google/genai SDK
 const FALLBACK_MODELS = [
-  'gemini-2.5-flash',        // Your current working model (rate limited)
-  'gemini-3-flash',           // Newer model with separate quotas
-  'gemini-3.1-flash-lite',    // Even newer, separate quotas (15 RPM available!)
-  'gemini-2.5-flash-lite',    // Lite version, separate quotas
-  'gemma-3-12b',              // Open model, different quota pool
-  'gemma-3-27b',              // Larger open model
+  'gemini-2.5-flash-lite',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
 ];
 const SYSTEM_PROMPT = `You are an expert code reviewer. Analyze the provided code thoroughly and return a structured JSON review.
 

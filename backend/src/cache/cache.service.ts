@@ -59,13 +59,19 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
     this.logger.log('Redis disconnected');
   }
 
+  private get isReady(): boolean {
+    return this.client.status === 'ready';
+  }
+
   async get<T>(key: string): Promise<T | null> {
+    if (!this.isReady) return null;
     const value = await this.client.get(key);
     if (value === null) return null;
     return JSON.parse(value) as T;
   }
 
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
+    if (!this.isReady) return;
     const serialized = JSON.stringify(value);
     if (ttlSeconds !== undefined) {
       await this.client.setex(key, ttlSeconds, serialized);
@@ -75,19 +81,23 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
   }
 
   async del(key: string): Promise<void> {
+    if (!this.isReady) return;
     await this.client.del(key);
   }
 
   async reset(): Promise<void> {
+    if (!this.isReady) return;
     await this.client.flushdb();
   }
 
   async exists(key: string): Promise<boolean> {
+    if (!this.isReady) return false;
     const count = await this.client.exists(key);
     return count > 0;
   }
 
   async deletePattern(pattern: string): Promise<void> {
+    if (!this.isReady) return;
     const keys = await this.client.keys(pattern);
     if (keys.length > 0) {
       await this.client.del(...keys);

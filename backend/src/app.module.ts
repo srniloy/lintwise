@@ -17,6 +17,8 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { GeminiModule } from './gemini/gemini.module';
 import { ReviewsModule } from './reviews/reviews.module';
+import { SnippetsModule } from './snippets/snippets.module';
+import { CollectionsModule } from './collections/collections.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -67,6 +69,8 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
     UsersModule,
     GeminiModule,
     ReviewsModule,
+    SnippetsModule,
+    CollectionsModule,
   ],
 
   controllers: [AppController],
