@@ -15,7 +15,6 @@ import {
   ChevronUp,
   ChevronRight,
   ArrowLeft,
-  Download,
   FileCode2,
   MapPin,
   Lightbulb,
@@ -23,9 +22,13 @@ import {
   PartyPopper,
   X,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { ROUTES } from '@/constants/routes'
 import { reviewService } from '@/services/reviewService'
+import type { ExportFormat } from '@/services/reviewService'
 import { useThemeStore } from '@/store/themeStore'
+import { saveBlobAs } from '@/lib/download'
+import { ExportMenu } from '@/components/ExportMenu'
 import type { Review, Issue, IssueCategory, IssueSeverity } from '@/types/review'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -350,6 +353,7 @@ export default function ReviewDetailPage() {
   const [expandedIds, setExpandedIds]   = useState<Set<string>>(new Set())
   const [sevFilter, setSevFilter]       = useState<Set<IssueSeverity>>(new Set())
   const [catFilter, setCatFilter]       = useState<Set<IssueCategory>>(new Set())
+  const [exporting, setExporting]       = useState(false)
 
   // ── Fetch ────────────────────────────────────────────────────────────────────
 
@@ -406,6 +410,23 @@ export default function ReviewDetailPage() {
   }
 
   const hasFilters = sevFilter.size > 0 || catFilter.size > 0
+
+  // ── Export ────────────────────────────────────────────────────────────────────
+
+  async function handleExport(format: ExportFormat) {
+    if (!review) return
+    setExporting(true)
+    try {
+      const { blob, filename } = await reviewService.exportById(review.id, format)
+      saveBlobAs(blob, filename)
+      toast.success(`Exported as ${format.toUpperCase()}`)
+    } catch (err) {
+      const message = (err as { message?: string })?.message ?? 'Export failed'
+      toast.error(message)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   // ── Issue expand/collapse ────────────────────────────────────────────────────
 
@@ -499,17 +520,10 @@ export default function ReviewDetailPage() {
             </div>
           </div>
 
-          {/* Export placeholder (Step 16) */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            disabled
-            title="Export (coming in Step 16)"
-          >
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
+          {/* Export dropdown (FR5.1) */}
+          <div className="shrink-0">
+            <ExportMenu onExport={handleExport} loading={exporting} />
+          </div>
         </div>
       </div>
 

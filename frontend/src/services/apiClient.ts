@@ -58,6 +58,34 @@ async function request<T>(
   return json as T
 }
 
+async function download(endpoint: string): Promise<{ blob: Blob; filename: string }> {
+  const token = getAccessToken()
+  const res = await fetch(`${BASE_URL}${endpoint}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  })
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      localStorage.removeItem('lintwise-auth')
+      window.location.href = '/login'
+    }
+    let message = `Download failed (${res.status})`
+    try {
+      const body = (await res.json()) as ApiError
+      if (body.message) message = body.message
+    } catch {
+      /* non-JSON error body */
+    }
+    throw { message, statusCode: res.status } as ApiError
+  }
+
+  const disp = res.headers.get('content-disposition') ?? ''
+  const match = /filename="?([^";]+)"?/.exec(disp)
+  const filename = match?.[1] ?? 'export'
+  const blob = await res.blob()
+  return { blob, filename }
+}
+
 export const api = {
   get: <T>(endpoint: string, options?: RequestInit) =>
     request<T>(endpoint, { method: 'GET', ...options }),
@@ -85,4 +113,6 @@ export const api = {
 
   delete: <T>(endpoint: string, options?: RequestInit) =>
     request<T>(endpoint, { method: 'DELETE', ...options }),
+
+  download,
 }

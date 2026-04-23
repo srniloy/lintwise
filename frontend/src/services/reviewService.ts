@@ -7,6 +7,8 @@ export interface ReviewStatusResponse {
   createdAt: string
 }
 
+export type ExportFormat = 'json' | 'markdown' | 'csv' | 'pdf'
+
 export const reviewService = {
   create: (dto: CreateReviewDto) =>
     api.post<Review>('/reviews', dto),
@@ -19,6 +21,9 @@ export const reviewService = {
 
   deleteById: (id: string) =>
     api.delete<void>(`/reviews/${id}`),
+
+  exportById: (id: string, format: ExportFormat) =>
+    api.download(`/reviews/${id}/export?format=${format}`),
 
   list: (params?: { page?: number; limit?: number; status?: string; language?: string; search?: string }) => {
     const query = new URLSearchParams()

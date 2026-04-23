@@ -19,6 +19,9 @@ import {
 import { toast } from 'sonner'
 import { ROUTES } from '@/constants/routes'
 import { reviewService } from '@/services/reviewService'
+import type { ExportFormat } from '@/services/reviewService'
+import { saveBlobAs } from '@/lib/download'
+import { ExportMenu } from '@/components/ExportMenu'
 import type { Review, ReviewStatus } from '@/types/review'
 import { Badge } from '@/components/ui/badge'
 import type { BadgeProps } from '@/components/ui/badge'
@@ -547,6 +550,9 @@ export default function ReviewsPage() {
   // ── Delete ────────────────────────────────────────────────────────────────
   const [deleteTarget, setDeleteTarget] = useState<Review | null>(null)
 
+  // ── Bulk export ───────────────────────────────────────────────────────────
+  const [exporting, setExporting] = useState(false)
+
   // ── Debounce search ───────────────────────────────────────────────────────
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   function handleSearchChange(val: string) {
@@ -629,14 +635,16 @@ export default function ReviewsPage() {
   }
 
   // ── Selection logic ───────────────────────────────────────────────────────
+  const MAX_SELECT = 20
+
   function toggleSelect(id: string) {
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(id)) {
         next.delete(id)
       } else {
-        if (next.size >= 2) {
-          toast.error('You can only compare 2 reviews at a time')
+        if (next.size >= MAX_SELECT) {
+          toast.error(`You can select up to ${MAX_SELECT} reviews at a time`)
           return prev
         }
         next.add(id)
@@ -646,6 +654,40 @@ export default function ReviewsPage() {
   }
 
   function clearSelection() { setSelected(new Set()) }
+
+  // ── Bulk export ───────────────────────────────────────────────────────────
+  async function handleBulkExport(format: ExportFormat) {
+    const ids = Array.from(selected)
+    if (ids.length === 0) return
+
+    setExporting(true)
+    let successCount = 0
+    let firstError: string | null = null
+
+    for (const id of ids) {
+      try {
+        const { blob, filename } = await reviewService.exportById(id, format)
+        saveBlobAs(blob, filename)
+        successCount++
+      } catch (err) {
+        if (!firstError) firstError = (err as { message?: string })?.message ?? 'Export failed'
+      }
+    }
+
+    setExporting(false)
+
+    if (successCount > 0 && !firstError) {
+      toast.success(
+        successCount === 1
+          ? `Exported as ${format.toUpperCase()}`
+          : `Exported ${successCount} reviews as ${format.toUpperCase()}`,
+      )
+    } else if (successCount > 0 && firstError) {
+      toast.warning(`Exported ${successCount} of ${ids.length} reviews. ${firstError}`)
+    } else {
+      toast.error(firstError ?? 'Export failed')
+    }
+  }
 
   const compareReviews = useMemo(
     () => Array.from(selected).map((id) => allReviews.find((r) => r.id === id)!).filter(Boolean),
@@ -880,7 +922,7 @@ export default function ReviewsPage() {
         />
       )}
 
-      {/* ── Compare sticky bar ── */}
+      {/* ── Selection sticky bar ── */}
       {selected.size > 0 && (
         <div
           className={cn(
@@ -896,11 +938,17 @@ export default function ReviewsPage() {
             size="sm"
             disabled={selected.size !== 2}
             onClick={() => setCompareOpen(true)}
-            title={selected.size < 2 ? 'Select one more COMPLETED review to compare' : undefined}
+            title={selected.size !== 2 ? 'Select exactly 2 reviews to compare' : undefined}
           >
             <GitCompareArrows className="h-4 w-4" />
             Compare
           </Button>
+          <ExportMenu
+            onExport={handleBulkExport}
+            loading={exporting}
+            label={selected.size > 1 ? `Export ${selected.size}` : 'Export'}
+            align="right"
+          />
           <button
             onClick={clearSelection}
             className="rounded-full p-1 text-muted-foreground hover:text-foreground transition-colors"
