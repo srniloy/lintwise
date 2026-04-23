@@ -19,6 +19,7 @@ import { GeminiModule } from './gemini/gemini.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { SnippetsModule } from './snippets/snippets.module';
 import { CollectionsModule } from './collections/collections.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -71,6 +72,7 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
     ReviewsModule,
     SnippetsModule,
     CollectionsModule,
+    AnalyticsModule,
   ],
 
   controllers: [AppController],
