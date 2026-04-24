@@ -7,13 +7,22 @@ import {
   FileCode2,
   Languages as LanguagesIcon,
   Plus,
+  RefreshCw,
   Sparkles,
   TrendingUp,
+  Trophy,
+  Users,
 } from 'lucide-react'
 import { ROUTES } from '@/constants/routes'
-import { reviewService } from '@/services/reviewService'
+import { analyticsService } from '@/services/analyticsService'
+import type {
+  AnalyticsRange,
+  PersonalStats,
+  TeamStats,
+} from '@/services/analyticsService'
 import { useAuth } from '@/hooks/useAuth'
-import type { Issue, IssueCategory, Review } from '@/types/review'
+import { useTheme } from '@/hooks/useTheme'
+import type { IssueCategory } from '@/types/review'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -27,27 +36,13 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
-// ── Date range ────────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
-type DateRange = '7d' | '30d' | '90d' | 'all'
-
-const RANGE_LABEL: Record<DateRange, string> = {
+const RANGE_LABEL: Record<AnalyticsRange, string> = {
   '7d':  'Last 7 days',
   '30d': 'Last 30 days',
   '90d': 'Last 90 days',
-  all:   'All time',
 }
-
-function rangeCutoff(range: DateRange): Date | null {
-  if (range === 'all') return null
-  const days = { '7d': 7, '30d': 30, '90d': 90 }[range]
-  const d = new Date()
-  d.setDate(d.getDate() - days)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
-
-// ── Category meta ─────────────────────────────────────────────────────────────
 
 const CATEGORY_META: Record<IssueCategory, { label: string; color: string }> = {
   SECURITY:      { label: 'Security',      color: '#ef4444' },
@@ -57,15 +52,6 @@ const CATEGORY_META: Record<IssueCategory, { label: string; color: string }> = {
   DOCUMENTATION: { label: 'Documentation', color: '#3b82f6' },
   TESTING:       { label: 'Testing',       color: '#10b981' },
   DEPENDENCIES:  { label: 'Dependencies',  color: '#06b6d4' },
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function startOfMonth(d: Date): Date {
-  const m = new Date(d)
-  m.setDate(1)
-  m.setHours(0, 0, 0, 0)
-  return m
 }
 
 function formatShortDate(d: Date): string {
@@ -99,7 +85,9 @@ function StatTile({
           <Icon className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            {label}
+          </p>
           <p className="mt-0.5 text-2xl font-bold text-foreground leading-tight">{value}</p>
           {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
         </div>
@@ -122,7 +110,7 @@ function DonutChart({ slices }: { slices: DonutSlice[] }) {
 
   if (total === 0) {
     return (
-      <div className="flex h-[220px] flex-col items-center justify-center gap-2 text-center">
+      <div className="flex h-55 flex-col items-center justify-center gap-2 text-center">
         <Sparkles className="h-8 w-8 text-muted-foreground/50" />
         <p className="text-sm text-muted-foreground">No issues in this range</p>
       </div>
@@ -149,7 +137,6 @@ function DonutChart({ slices }: { slices: DonutSlice[] }) {
     <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
       <div className="relative shrink-0">
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-          {/* Track */}
           <circle
             cx={cx} cy={cy} r={r}
             fill="none"
@@ -157,7 +144,6 @@ function DonutChart({ slices }: { slices: DonutSlice[] }) {
             strokeWidth={stroke}
             className="text-muted/40"
           />
-          {/* Arcs */}
           {arcs.map((a) => (
             <circle
               key={a.key}
@@ -176,7 +162,6 @@ function DonutChart({ slices }: { slices: DonutSlice[] }) {
         </div>
       </div>
 
-      {/* Legend */}
       <ul className="flex-1 space-y-1.5 text-sm">
         {arcs.map((a) => (
           <li key={a.key} className="flex items-center gap-2">
@@ -204,7 +189,26 @@ interface TrendPoint {
   score: number
 }
 
-function LineChart({ points }: { points: TrendPoint[] }) {
+function makeSampleTrend(): TrendPoint[] {
+  const now = new Date()
+  const day = 24 * 60 * 60 * 1000
+  // 5 evenly-spaced dummy points across the last ~4 weeks.
+  const scores = [62, 71, 68, 79, 84]
+  return scores.map((score, i) => ({
+    date: new Date(now.getTime() - (scores.length - 1 - i) * 7 * day),
+    score,
+  }))
+}
+
+function LineChart({
+  points,
+  totalInRange,
+}: {
+  points: TrendPoint[]
+  totalInRange: number
+}) {
+  const { theme } = useTheme()
+  const isDark = theme === 'dark'
   const width = 640
   const height = 200
   const padL = 36
@@ -214,44 +218,106 @@ function LineChart({ points }: { points: TrendPoint[] }) {
   const plotW = width - padL - padR
   const plotH = height - padT - padB
 
-  if (points.length === 0) {
-    return (
-      <div className="flex h-[200px] flex-col items-center justify-center gap-2 text-center">
-        <TrendingUp className="h-8 w-8 text-muted-foreground/50" />
-        <p className="text-sm text-muted-foreground">No completed reviews yet</p>
-      </div>
-    )
-  }
+  // Fall back to sample data so the chart isn't empty.
+  const isSample = points.length === 0
+  const renderPoints = isSample ? makeSampleTrend() : points
+  const emptyMessage = isSample
+    ? totalInRange === 0
+      ? 'No reviews yet — showing sample data'
+      : 'No completed & scored reviews yet — showing sample data'
+    : null
 
-  const minT = points[0].date.getTime()
-  const maxT = points[points.length - 1].date.getTime()
+  const minT = renderPoints[0].date.getTime()
+  const maxT = renderPoints[renderPoints.length - 1].date.getTime()
   const span = Math.max(1, maxT - minT)
 
   const xOf = (d: Date) =>
-    points.length === 1 ? padL + plotW / 2 : padL + ((d.getTime() - minT) / span) * plotW
-
+    renderPoints.length === 1
+      ? padL + plotW / 2
+      : padL + ((d.getTime() - minT) / span) * plotW
   const yOf = (score: number) => padT + (1 - score / 100) * plotH
 
-  const path = points
+  const path = renderPoints
     .map((p, i) => `${i === 0 ? 'M' : 'L'} ${xOf(p.date).toFixed(2)} ${yOf(p.score).toFixed(2)}`)
     .join(' ')
 
   const areaPath =
-    `${path} L ${xOf(points[points.length - 1].date).toFixed(2)} ${padT + plotH} ` +
-    `L ${xOf(points[0].date).toFixed(2)} ${padT + plotH} Z`
+    `${path} L ${xOf(renderPoints[renderPoints.length - 1].date).toFixed(2)} ${padT + plotH} ` +
+    `L ${xOf(renderPoints[0].date).toFixed(2)} ${padT + plotH} Z`
 
-  // Axis labels (5 y-ticks: 0, 25, 50, 75, 100)
   const yTicks = [0, 25, 50, 75, 100]
 
+  // Score-graded point colors (A = green → F = red). Slightly deeper hues in
+  // light mode so dots pop against a white background.
+  const pointColor = (score: number): string => {
+    if (isDark) {
+      if (score >= 90) return '#22c55e'
+      if (score >= 80) return '#10b981'
+      if (score >= 70) return '#eab308'
+      if (score >= 60) return '#f97316'
+      return '#ef4444'
+    }
+    // Light mode: one shade darker for contrast on white
+    if (score >= 90) return '#16a34a' // green-600
+    if (score >= 80) return '#059669' // emerald-600
+    if (score >= 70) return '#ca8a04' // yellow-600
+    if (score >= 60) return '#ea580c' // orange-600
+    return '#dc2626'                  // red-600
+  }
+
+  // Theme-aware gradient stops — deeper in light mode, vivid in dark mode.
+  const lineStops = isDark
+    ? ['#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899']   // cyan-500 → pink-500
+    : ['#0891b2', '#2563eb', '#7c3aed', '#db2777']   // cyan-600 → pink-600
+
+  const areaStops = isDark
+    ? [
+        { color: '#8b5cf6', opacity: 0.45 },
+        { color: '#3b82f6', opacity: 0.20 },
+        { color: '#06b6d4', opacity: 0.05 },
+      ]
+    : [
+        { color: '#7c3aed', opacity: 0.28 },
+        { color: '#2563eb', opacity: 0.15 },
+        { color: '#0891b2', opacity: 0.04 },
+      ]
+
+  // Unique gradient IDs so multiple LineCharts on a page don't collide.
+  const gradId  = `lintwise-trend-${isSample ? 'sample' : 'real'}-${theme}`
+  const areaGradId = `${gradId}-area`
+
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="relative w-full overflow-x-auto">
+      {emptyMessage && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-start justify-center pt-2">
+          <span className="rounded-full border border-dashed border-border bg-background/80 px-3 py-1 text-[11px] font-medium text-muted-foreground shadow-sm">
+            {emptyMessage}
+          </span>
+        </div>
+      )}
       <svg
         viewBox={`0 0 ${width} ${height}`}
         preserveAspectRatio="none"
         className="w-full"
         style={{ maxHeight: 240 }}
       >
-        {/* Grid */}
+        <defs>
+          {/* Line gradient: cyan → blue → violet → pink (theme-aware) */}
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%"   stopColor={lineStops[0]} />
+            <stop offset="35%"  stopColor={lineStops[1]} />
+            <stop offset="70%"  stopColor={lineStops[2]} />
+            <stop offset="100%" stopColor={lineStops[3]} />
+          </linearGradient>
+          {/* Area gradient: same hues but vertical + fades to transparent */}
+          <linearGradient id={areaGradId} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%"   stopColor={areaStops[0].color} stopOpacity={areaStops[0].opacity} />
+            <stop offset="60%"  stopColor={areaStops[1].color} stopOpacity={areaStops[1].opacity} />
+            <stop offset="100%" stopColor={areaStops[2].color} stopOpacity={areaStops[2].opacity} />
+          </linearGradient>
+        </defs>
+
+        {/* Gridlines */}
         {yTicks.map((t) => {
           const y = yOf(t)
           return (
@@ -273,45 +339,61 @@ function LineChart({ points }: { points: TrendPoint[] }) {
         })}
 
         {/* Area fill */}
-        <path d={areaPath} fill="hsl(var(--primary))" fillOpacity="0.12" />
+        <path
+          d={areaPath}
+          fill={`url(#${areaGradId})`}
+        />
 
-        {/* Line */}
+        {/* Trend line */}
         <path
           d={path}
           fill="none"
-          stroke="hsl(var(--primary))"
-          strokeWidth="2"
+          stroke={`url(#${gradId})`}
+          strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
+          strokeDasharray={isSample ? '6 4' : undefined}
+          opacity={isSample ? 0.85 : 1}
         />
 
-        {/* Points */}
-        {points.map((p, i) => (
-          <circle
-            key={i}
-            cx={xOf(p.date)} cy={yOf(p.score)}
-            r={3}
-            fill="hsl(var(--primary))"
-          >
-            <title>{`${p.date.toLocaleDateString()}: ${p.score}`}</title>
-          </circle>
+        {/* Points colored by score grade */}
+        {renderPoints.map((p, i) => (
+          <g key={i}>
+            {/* halo */}
+            <circle
+              cx={xOf(p.date)} cy={yOf(p.score)}
+              r={6}
+              fill={pointColor(p.score)}
+              opacity={isDark ? 0.3 : 0.2}
+            />
+            {/* dot */}
+            <circle
+              cx={xOf(p.date)} cy={yOf(p.score)}
+              r={4}
+              fill={pointColor(p.score)}
+              stroke={isDark ? '#0f172a' : '#ffffff'}
+              strokeWidth="1.5"
+            >
+              <title>{`${p.date.toLocaleDateString()}: ${p.score}`}</title>
+            </circle>
+          </g>
         ))}
 
-        {/* X labels (first + last) */}
+        {/* X labels */}
         <text
           x={padL} y={height - 8}
           textAnchor="start"
           className="fill-muted-foreground text-[10px]"
         >
-          {formatShortDate(points[0].date)}
+          {formatShortDate(renderPoints[0].date)}
         </text>
-        {points.length > 1 && (
+        {renderPoints.length > 1 && (
           <text
             x={width - padR} y={height - 8}
             textAnchor="end"
             className="fill-muted-foreground text-[10px]"
           >
-            {formatShortDate(points[points.length - 1].date)}
+            {formatShortDate(renderPoints[renderPoints.length - 1].date)}
           </text>
         )}
       </svg>
@@ -329,7 +411,7 @@ interface BarRow {
 function BarChart({ rows }: { rows: BarRow[] }) {
   if (rows.length === 0) {
     return (
-      <div className="flex h-[180px] flex-col items-center justify-center gap-2 text-center">
+      <div className="flex h-45 flex-col items-center justify-center gap-2 text-center">
         <LanguagesIcon className="h-8 w-8 text-muted-foreground/50" />
         <p className="text-sm text-muted-foreground">No languages in this range</p>
       </div>
@@ -371,93 +453,93 @@ export default function DashboardPage() {
   const navigate = useNavigate()
   const { user, isPremium } = useAuth()
 
-  const [reviews, setReviews] = useState<Review[]>([])
+  const [range, setRange] = useState<AnalyticsRange>('30d')
+
+  const [stats, setStats] = useState<PersonalStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [range, setRange] = useState<DateRange>('30d')
+  const [reloadKey, setReloadKey] = useState(0)
 
-  // ── Fetch ─────────────────────────────────────────────────────────────────
+  const [teamStats, setTeamStats] = useState<TeamStats | null>(null)
+  const [teamLoading, setTeamLoading] = useState(false)
+  const [teamError, setTeamError] = useState<string | null>(null)
+
+  // ── Fetch personal stats ──────────────────────────────────────────────────
   useEffect(() => {
+    let cancelled = false
     setLoading(true)
-    reviewService
-      .list({ limit: 100 })
-      .then((res) => { setReviews(res.reviews); setLoading(false) })
-      .catch((err: { message?: string }) => {
-        setError(err?.message ?? 'Failed to load dashboard data')
-        setLoading(false)
+    setError(null)
+    analyticsService
+      .getPersonal(range)
+      .then((data) => {
+        if (!cancelled) {
+          setStats(data)
+          setLoading(false)
+        }
       })
-  }, [])
+      .catch((err: { message?: string }) => {
+        if (!cancelled) {
+          setError(err?.message ?? 'Failed to load analytics')
+          setLoading(false)
+        }
+      })
+    return () => { cancelled = true }
+  }, [range, reloadKey])
 
-  // ── Filter by date range ──────────────────────────────────────────────────
-  const inRange = useMemo(() => {
-    const cutoff = rangeCutoff(range)
-    if (!cutoff) return reviews
-    return reviews.filter((r) => new Date(r.createdAt) >= cutoff)
-  }, [reviews, range])
+  // ── Fetch team stats (premium only) ───────────────────────────────────────
+  useEffect(() => {
+    if (!isPremium) {
+      setTeamStats(null)
+      setTeamError(null)
+      return
+    }
+    let cancelled = false
+    setTeamLoading(true)
+    setTeamError(null)
+    analyticsService
+      .getTeam(range)
+      .then((data) => {
+        if (!cancelled) {
+          setTeamStats(data)
+          setTeamLoading(false)
+        }
+      })
+      .catch((err: { message?: string; statusCode?: number }) => {
+        if (!cancelled) {
+          setTeamStats(null)
+          // 404 just means "no team yet" — not an error worth surfacing loudly
+          setTeamError(err?.statusCode === 404 ? null : (err?.message ?? 'Failed to load team analytics'))
+          setTeamLoading(false)
+        }
+      })
+    return () => { cancelled = true }
+  }, [range, isPremium, reloadKey])
 
-  // ── Derived personal stats ────────────────────────────────────────────────
-  const totalReviews = reviews.length
-  const thisMonthCount = useMemo(() => {
-    const som = startOfMonth(new Date())
-    return reviews.filter((r) => new Date(r.createdAt) >= som).length
-  }, [reviews])
-
-  const completedInRange = useMemo(
-    () => inRange.filter((r) => r.status === 'COMPLETED'),
-    [inRange],
-  )
-
-  const avgScore = useMemo(() => {
-    const scored = completedInRange.filter((r) => r.overallScore != null)
-    if (scored.length === 0) return null
-    const sum = scored.reduce((s, r) => s + (r.overallScore ?? 0), 0)
-    return Math.round(sum / scored.length)
-  }, [completedInRange])
-
-  const totalIssues = useMemo(
-    () => completedInRange.reduce((s, r) => s + (r.issues?.length ?? 0), 0),
-    [completedInRange],
-  )
-
-  // ── Donut: issues by category ─────────────────────────────────────────────
-  const categorySlices = useMemo<DonutSlice[]>(() => {
-    const counts: Partial<Record<IssueCategory, number>> = {}
-    completedInRange.forEach((r) =>
-      r.issues?.forEach((i: Issue) => {
-        counts[i.category] = (counts[i.category] ?? 0) + 1
-      }),
-    )
+  // ── Derived chart data ────────────────────────────────────────────────────
+  const donutSlices = useMemo<DonutSlice[]>(() => {
+    if (!stats) return []
     return (Object.keys(CATEGORY_META) as IssueCategory[])
       .map((cat) => ({
         key: cat,
         label: CATEGORY_META[cat].label,
-        value: counts[cat] ?? 0,
+        value: stats.issuesByCategory[cat] ?? 0,
         color: CATEGORY_META[cat].color,
       }))
       .filter((s) => s.value > 0)
       .sort((a, b) => b.value - a.value)
-  }, [completedInRange])
+  }, [stats])
 
-  // ── Line: score trend ─────────────────────────────────────────────────────
   const trendPoints = useMemo<TrendPoint[]>(() => {
-    return completedInRange
-      .filter((r) => r.overallScore != null)
-      .map((r) => ({
-        date: new Date(r.createdAt),
-        score: r.overallScore as number,
-      }))
+    if (!stats) return []
+    return stats.scoreTrend
+      .map((p) => ({ date: new Date(p.date), score: p.score }))
       .sort((a, b) => a.date.getTime() - b.date.getTime())
-  }, [completedInRange])
+  }, [stats])
 
-  // ── Bar: languages ────────────────────────────────────────────────────────
   const languageRows = useMemo<BarRow[]>(() => {
-    const counts = new Map<string, number>()
-    inRange.forEach((r) => counts.set(r.language, (counts.get(r.language) ?? 0) + 1))
-    return Array.from(counts.entries())
-      .map(([label, value]) => ({ label, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8)
-  }, [inRange])
+    if (!stats) return []
+    return stats.languages.slice(0, 8).map((l) => ({ label: l.language, value: l.count }))
+  }, [stats])
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
@@ -479,7 +561,7 @@ export default function DashboardPage() {
   }
 
   // ── Error ─────────────────────────────────────────────────────────────────
-  if (error) {
+  if (error || !stats) {
     return (
       <div className="mx-auto flex min-h-[60vh] max-w-5xl flex-col items-center justify-center gap-3 p-6 text-center">
         <AlertCircle className="h-10 w-10 text-destructive" />
@@ -493,7 +575,7 @@ export default function DashboardPage() {
   }
 
   // ── Empty state ───────────────────────────────────────────────────────────
-  if (totalReviews === 0) {
+  if (stats.totalReviews === 0) {
     return (
       <div className="mx-auto max-w-5xl space-y-5 p-6">
         <div>
@@ -540,7 +622,7 @@ export default function DashboardPage() {
 
         <div className="flex items-center gap-2">
           <div className="w-36">
-            <Select value={range} onValueChange={(v) => setRange(v as DateRange)}>
+            <Select value={range} onValueChange={(v) => setRange(v as AnalyticsRange)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -548,10 +630,18 @@ export default function DashboardPage() {
                 <SelectItem value="7d">Last 7 days</SelectItem>
                 <SelectItem value="30d">Last 30 days</SelectItem>
                 <SelectItem value="90d">Last 90 days</SelectItem>
-                <SelectItem value="all">All time</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setReloadKey((k) => k + 1)}
+            aria-label="Refresh analytics"
+            title="Refresh analytics"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
           <Button size="sm" onClick={() => navigate(ROUTES.REVIEW_NEW)}>
             <Plus className="h-4 w-4" />
             New Review
@@ -563,27 +653,27 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile
           label="Total Reviews"
-          value={totalReviews}
+          value={stats.totalReviews}
           hint="All time"
           Icon={FileCode2}
         />
         <StatTile
           label="This Month"
-          value={thisMonthCount}
-          hint={`${thisMonthCount === 1 ? 'review' : 'reviews'} submitted`}
+          value={stats.thisMonthReviews}
+          hint={`${stats.thisMonthReviews === 1 ? 'review' : 'reviews'} submitted`}
           Icon={BarChart3}
           accent="bg-blue-500/10 text-blue-600 dark:text-blue-400"
         />
         <StatTile
           label="Avg. Score"
-          value={avgScore ?? '—'}
-          hint={avgScore != null ? 'out of 100' : 'No completed reviews'}
+          value={stats.averageScore ?? '—'}
+          hint={stats.averageScore != null ? 'out of 100' : 'No completed reviews'}
           Icon={TrendingUp}
           accent="bg-green-500/10 text-green-600 dark:text-green-400"
         />
         <StatTile
           label="Issues Found"
-          value={totalIssues}
+          value={donutSlices.reduce((sum, s) => sum + s.value, 0)}
           hint={RANGE_LABEL[range]}
           Icon={Sparkles}
           accent="bg-orange-500/10 text-orange-600 dark:text-orange-400"
@@ -596,7 +686,10 @@ export default function DashboardPage() {
           <CardTitle className="text-base">Code Quality Trend</CardTitle>
         </CardHeader>
         <CardContent>
-          <LineChart points={trendPoints} />
+          <LineChart
+            points={trendPoints}
+            totalInRange={stats.languages.reduce((sum, l) => sum + l.count, 0)}
+          />
         </CardContent>
       </Card>
 
@@ -607,7 +700,7 @@ export default function DashboardPage() {
             <CardTitle className="text-base">Issues by Category</CardTitle>
           </CardHeader>
           <CardContent>
-            <DonutChart slices={categorySlices} />
+            <DonutChart slices={donutSlices} />
           </CardContent>
         </Card>
 
@@ -622,7 +715,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Team stats (premium) */}
-      {isPremium ? (
+      {isPremium && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
@@ -632,19 +725,99 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Team-wide analytics will appear here once your team has shared reviews. Visit the{' '}
-              <button
-                onClick={() => navigate(ROUTES.TEAM)}
-                className="text-primary underline-offset-2 hover:underline"
-              >
-                Team page
-              </button>{' '}
-              to invite members.
-            </p>
+            {teamLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-6 w-40" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            ) : teamError ? (
+              <p className="text-sm text-destructive">{teamError}</p>
+            ) : !teamStats || teamStats.teamId == null ? (
+              <p className="text-sm text-muted-foreground">
+                You're not in a team yet. Visit the{' '}
+                <button
+                  onClick={() => navigate(ROUTES.TEAM)}
+                  className="text-primary underline-offset-2 hover:underline"
+                >
+                  Team page
+                </button>{' '}
+                to create or join one.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {/* Team stat tiles */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="rounded-lg border border-border bg-muted/20 p-3">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Users className="h-3.5 w-3.5" />
+                      Members
+                    </div>
+                    <p className="mt-1 text-xl font-bold text-foreground">
+                      {teamStats.memberCount}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/20 p-3">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <FileCode2 className="h-3.5 w-3.5" />
+                      Reviews
+                    </div>
+                    <p className="mt-1 text-xl font-bold text-foreground">
+                      {teamStats.totalReviews}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/20 p-3">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <TrendingUp className="h-3.5 w-3.5" />
+                      Avg. Score
+                    </div>
+                    <p className="mt-1 text-xl font-bold text-foreground">
+                      {teamStats.averageScore ?? '—'}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border bg-muted/20 p-3">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Issues
+                    </div>
+                    <p className="mt-1 text-xl font-bold text-foreground">
+                      {Object.values(teamStats.issuesByCategory).reduce((s, n) => s + n, 0)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Top contributors */}
+                {teamStats.topContributors.length > 0 && (
+                  <div>
+                    <p className="mb-2 flex items-center gap-1.5 text-sm font-medium text-foreground">
+                      <Trophy className="h-3.5 w-3.5 text-yellow-500" />
+                      Top Contributors
+                    </p>
+                    <ul className="space-y-1.5">
+                      {teamStats.topContributors.slice(0, 5).map((c, i) => (
+                        <li
+                          key={c.userId}
+                          className="flex items-center gap-3 rounded-md border border-border bg-card px-3 py-2"
+                        >
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+                            {i + 1}
+                          </span>
+                          <span className="flex-1 truncate text-sm text-foreground">{c.name}</span>
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {c.reviewCount} {c.reviewCount === 1 ? 'review' : 'reviews'}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
-      ) : (
+      )}
+
+      {!isPremium && (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-start gap-2 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">

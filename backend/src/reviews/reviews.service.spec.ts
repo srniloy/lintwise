@@ -9,6 +9,7 @@ import { ReviewsService } from './reviews.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { GeminiService } from '../gemini/gemini.service';
 import { CacheService } from '../cache/cache.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import type { AIReviewResult } from '../gemini/gemini.types';
 
 // ── Factories ─────────────────────────────────────────────────────────────────
@@ -95,6 +96,10 @@ const mockCache = {
   deletePattern: jest.fn().mockResolvedValue(undefined),
 };
 
+const mockAnalytics = {
+  bustUserCache: jest.fn().mockResolvedValue(undefined),
+};
+
 // ── Suite ─────────────────────────────────────────────────────────────────────
 
 describe('ReviewsService', () => {
@@ -115,6 +120,7 @@ describe('ReviewsService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: GeminiService, useValue: mockGemini },
         { provide: CacheService, useValue: mockCache },
+        { provide: AnalyticsService, useValue: mockAnalytics },
       ],
     }).compile();
 

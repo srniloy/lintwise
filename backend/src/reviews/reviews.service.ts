@@ -8,6 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { GeminiService } from '../gemini/gemini.service';
 import { CacheService, TTL } from '../cache/cache.service';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReviewFilterDto } from './dto/review-filter.dto';
 import type { Review, Issue } from '@prisma/client';
@@ -20,6 +21,7 @@ export class ReviewsService {
     private readonly prisma: PrismaService,
     private readonly gemini: GeminiService,
     private readonly cache: CacheService,
+    private readonly analytics: AnalyticsService,
   ) {}
 
   // ── Create ────────────────────────────────────────────────────────────────
@@ -47,6 +49,9 @@ export class ReviewsService {
     this.processReview(review.id).catch((err: unknown) =>
       this.logger.error(`Background processing failed for review ${review.id}`, err),
     );
+
+    // Invalidate cached analytics so totalReviews/thisMonthReviews update
+    await this.analytics.bustUserCache(userId).catch(() => void 0);
 
     return review;
   }
@@ -93,10 +98,16 @@ export class ReviewsService {
       ]);
 
       this.logger.log(`Review ${reviewId} completed — score: ${result.overallScore}`);
+
+      // Analytics cache now stale — refresh on next dashboard request
+      await this.analytics.bustUserCache(review.userId).catch(() => void 0);
     } catch (err: unknown) {
       await this.prisma.review
         .update({ where: { id: reviewId }, data: { status: 'FAILED' } })
         .catch(() => void 0);
+
+      // Bust cache even on failure so the FAILED status is reflected
+      await this.analytics.bustUserCache(review.userId).catch(() => void 0);
 
       this.logger.error(`Review ${reviewId} failed`, err);
       throw err;
@@ -212,5 +223,6 @@ export class ReviewsService {
 
     await this.prisma.review.delete({ where: { id: reviewId } });
     await this.cache.del(`review:result:${reviewId}`);
+    await this.analytics.bustUserCache(userId).catch(() => void 0);
   }
 }

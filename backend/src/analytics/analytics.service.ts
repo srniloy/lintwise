@@ -127,8 +127,9 @@ export class AnalyticsService {
     }
 
     // Score trend — one point per completed review that has a score
+    // (Loose `!= null` so undefined from prisma is also treated as missing.)
     const scoreTrend: ScoreTrendPoint[] = rangeReviews
-      .filter((r) => r.status === 'COMPLETED' && r.overallScore !== null)
+      .filter((r) => r.status === 'COMPLETED' && r.overallScore != null)
       .map((r) => ({
         date: r.createdAt.toISOString(),
         score: r.overallScore as number,
@@ -163,6 +164,20 @@ export class AnalyticsService {
 
     await this.cache.set(cacheKey, stats, TTL.QUERY);
     return stats;
+  }
+
+  // ── Cache invalidation ──────────────────────────────────────────────────
+
+  /**
+   * Invalidate cached analytics for a user (and any team they belong to).
+   * Called from ReviewsService whenever a review is created, completed,
+   * failed, or deleted so the dashboard reflects fresh data immediately.
+   */
+  async bustUserCache(userId: string): Promise<void> {
+    await Promise.all([
+      this.cache.deletePattern(`analytics:personal:${userId}:*`),
+      this.cache.deletePattern(`analytics:team:${userId}:*`),
+    ]);
   }
 
   // ── Team stats ──────────────────────────────────────────────────────────
