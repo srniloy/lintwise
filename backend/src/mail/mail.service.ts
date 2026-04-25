@@ -9,11 +9,14 @@ export class MailService {
   private transporter: Transporter | null = null;
   private readonly from: string;
   private readonly frontendUrl: string;
+  private readonly apiUrl: string;
   private readonly isDev: boolean;
 
   constructor(private readonly config: ConfigService) {
     this.from = config.get<string>('mail.from', 'noreply@lintwise.com');
     this.frontendUrl = config.get<string>('frontendUrl', 'http://localhost:5173');
+    const port = config.get<number>('port', 3000);
+    this.apiUrl = `http://localhost:${port}/api/v1`;
     this.isDev = config.get<string>('nodeEnv', 'development') !== 'production';
 
     const host = config.get<string>('mail.host');
@@ -115,8 +118,16 @@ export class MailService {
     name: string,
     reviewId: string,
     issueCount: number,
+    unsubscribeToken?: string,
   ): Promise<void> {
     const url = `${this.frontendUrl}/review/${reviewId}`;
+    const unsubLink = unsubscribeToken
+      ? `<p style="color:#9ca3af;font-size:11px;margin-top:24px">
+           <a href="${this.apiUrl}/notifications/unsubscribe?token=${unsubscribeToken}" style="color:#9ca3af">
+             Unsubscribe from review notifications
+           </a>
+         </p>`
+      : '';
     await this.send(
       email,
       'Your LintWise code review is ready',
@@ -125,6 +136,55 @@ export class MailService {
         <p>Hi ${name}, your code review has finished. We found <strong>${issueCount}</strong> issue${issueCount === 1 ? '' : 's'}.</p>
         <a href="${url}" style="display:inline-block;padding:12px 24px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:6px;margin:16px 0">
           View Results
+        </a>
+        ${unsubLink}
+      </div>`,
+    );
+  }
+
+  async sendCriticalIssueEmail(
+    email: string,
+    name: string,
+    reviewId: string,
+    criticalCount: number,
+    unsubscribeToken?: string,
+  ): Promise<void> {
+    const url = `${this.frontendUrl}/review/${reviewId}`;
+    const unsubLink = unsubscribeToken
+      ? `<p style="color:#9ca3af;font-size:11px;margin-top:24px">
+           <a href="${this.apiUrl}/notifications/unsubscribe?token=${unsubscribeToken}" style="color:#9ca3af">
+             Unsubscribe from critical issue alerts
+           </a>
+         </p>`
+      : '';
+    await this.send(
+      email,
+      `⚠️ ${criticalCount} critical issue${criticalCount === 1 ? '' : 's'} found in your review`,
+      `<div style="font-family:sans-serif;max-width:600px;margin:auto">
+        <h2 style="color:#dc2626">Critical Issues Found</h2>
+        <p>Hi ${name}, your code review identified <strong>${criticalCount}</strong> critical severity issue${criticalCount === 1 ? '' : 's'} that require immediate attention.</p>
+        <a href="${url}" style="display:inline-block;padding:12px 24px;background:#dc2626;color:#fff;text-decoration:none;border-radius:6px;margin:16px 0">
+          View Critical Issues
+        </a>
+        ${unsubLink}
+      </div>`,
+    );
+  }
+
+  async sendReviewFailedEmail(
+    email: string,
+    name: string,
+    reviewId: string,
+  ): Promise<void> {
+    const url = `${this.frontendUrl}/review/${reviewId}/status`;
+    await this.send(
+      email,
+      'Your LintWise code review failed',
+      `<div style="font-family:sans-serif;max-width:600px;margin:auto">
+        <h2 style="color:#6b7280">Review Could Not Complete</h2>
+        <p>Hi ${name}, we were unable to complete your code review due to a processing error. You can retry from the status page.</p>
+        <a href="${url}" style="display:inline-block;padding:12px 24px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:6px;margin:16px 0">
+          View Status
         </a>
       </div>`,
     );

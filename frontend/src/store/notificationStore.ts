@@ -20,11 +20,8 @@ export const useNotificationStore = create<NotificationStore>((set, get) => ({
   fetchNotifications: async () => {
     set({ isLoading: true })
     try {
-      const notifications = await notificationService.getNotifications()
-      set({
-        notifications,
-        unreadCount: notifications.filter((n) => !n.isRead).length,
-      })
+      const { notifications, unreadCount } = await notificationService.getNotifications()
+      set({ notifications, unreadCount })
     } catch {
       // fail silently — notification errors must not break the app
     } finally {

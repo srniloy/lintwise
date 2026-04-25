@@ -5,15 +5,16 @@ import { cn, formatRelativeTime } from '@/lib/utils'
 import type { Notification, NotificationType } from '@/types'
 
 const TYPE_ICON: Record<NotificationType, ReactNode> = {
-  REVIEW_COMPLETE: <GitPullRequest size={13} className="text-green-500" />,
+  REVIEW_COMPLETED: <GitPullRequest size={13} className="text-green-500" />,
+  REVIEW_FAILED: <AlertTriangle size={13} className="text-orange-500" />,
   CRITICAL_ISSUE: <AlertTriangle size={13} className="text-destructive" />,
   MENTION: <AtSign size={13} className="text-blue-500" />,
+  COMMENT_REPLY: <AtSign size={13} className="text-purple-500" />,
+  TEAM_INVITE: <GitPullRequest size={13} className="text-indigo-500" />,
 }
 
 function notificationHref(n: Notification): string | null {
-  if (n.resourceId && (n.type === 'REVIEW_COMPLETE' || n.type === 'CRITICAL_ISSUE' || n.type === 'MENTION')) {
-    return `/review/${n.resourceId}`
-  }
+  if (n.resourceId) return `/review/${n.resourceId}`
   return null
 }
 

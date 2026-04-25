@@ -3,7 +3,7 @@ import type { Notification, NotificationPreferences } from '@/types'
 
 export const notificationService = {
   getNotifications: () =>
-    api.get<Notification[]>('/notifications'),
+    api.get<{ notifications: Notification[]; unreadCount: number }>('/notifications'),
 
   markRead: (id: string) =>
     api.patch<Notification>(`/notifications/${id}/read`),

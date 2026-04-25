@@ -1,4 +1,10 @@
-export type NotificationType = 'REVIEW_COMPLETE' | 'CRITICAL_ISSUE' | 'MENTION'
+export type NotificationType =
+  | 'REVIEW_COMPLETED'
+  | 'REVIEW_FAILED'
+  | 'CRITICAL_ISSUE'
+  | 'MENTION'
+  | 'COMMENT_REPLY'
+  | 'TEAM_INVITE'
 
 export interface Notification {
   id: string

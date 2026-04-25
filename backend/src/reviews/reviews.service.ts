@@ -9,6 +9,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GeminiService } from '../gemini/gemini.service';
 import { CacheService, TTL } from '../cache/cache.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { MailService } from '../mail/mail.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReviewFilterDto } from './dto/review-filter.dto';
 import type { Review, Issue } from '@prisma/client';
@@ -22,6 +24,8 @@ export class ReviewsService {
     private readonly gemini: GeminiService,
     private readonly cache: CacheService,
     private readonly analytics: AnalyticsService,
+    private readonly notifications: NotificationsService,
+    private readonly mail: MailService,
   ) {}
 
   // ── Create ────────────────────────────────────────────────────────────────
@@ -101,6 +105,44 @@ export class ReviewsService {
 
       // Analytics cache now stale — refresh on next dashboard request
       await this.analytics.bustUserCache(review.userId).catch(() => void 0);
+
+      // In-app notification: review complete
+      void this.notifications
+        .create(
+          review.userId,
+          'REVIEW_COMPLETED',
+          'Review Complete',
+          `Your code review finished with a score of ${result.overallScore}/100.`,
+          { resourceId: reviewId, resourceType: 'REVIEW' },
+        )
+        .catch((err: unknown) => this.logger.warn(`Failed to create REVIEW_COMPLETED notification: ${String(err)}`));
+
+      // In-app + email notification: critical issues
+      const criticalCount = result.issues.filter((i) => i.severity === 'CRITICAL').length;
+      if (criticalCount > 0) {
+        void this.notifications
+          .create(
+            review.userId,
+            'CRITICAL_ISSUE',
+            `${criticalCount} critical issue${criticalCount === 1 ? '' : 's'} found`,
+            `Your review contains ${criticalCount} critical severity issue${criticalCount === 1 ? '' : 's'} that need immediate attention.`,
+            { resourceId: reviewId, resourceType: 'REVIEW' },
+          )
+          .catch((err: unknown) => this.logger.warn(`Failed to create CRITICAL_ISSUE notification: ${String(err)}`));
+
+        void this.notifications
+          .sendEmailIfEnabled(review.userId, 'critical_issues', (email, name, token) =>
+            this.mail.sendCriticalIssueEmail(email, name, reviewId, criticalCount, token),
+          )
+          .catch(() => void 0);
+      }
+
+      // Email notification: review complete (only if not sending critical issues email)
+      void this.notifications
+        .sendEmailIfEnabled(review.userId, 'review_complete', (email, name, token) =>
+          this.mail.sendReviewCompleteEmail(email, name, reviewId, result.issues.length, token),
+        )
+        .catch(() => void 0);
     } catch (err: unknown) {
       await this.prisma.review
         .update({ where: { id: reviewId }, data: { status: 'FAILED' } })
@@ -108,6 +150,17 @@ export class ReviewsService {
 
       // Bust cache even on failure so the FAILED status is reflected
       await this.analytics.bustUserCache(review.userId).catch(() => void 0);
+
+      // In-app notification: review failed
+      void this.notifications
+        .create(
+          review.userId,
+          'REVIEW_FAILED',
+          'Review Failed',
+          'Your code review could not be completed due to a processing error.',
+          { resourceId: reviewId, resourceType: 'REVIEW' },
+        )
+        .catch(() => void 0);
 
       this.logger.error(`Review ${reviewId} failed`, err);
       throw err;
