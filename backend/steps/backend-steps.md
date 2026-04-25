@@ -1198,5 +1198,3 @@ npm run format
 
 ---
 
-**How to use this file:**  
-Tell me "Step N" or "let's do Step N" and I'll implement it fully, including all tests, before moving on.

@@ -320,6 +320,3 @@ Build the primitive components used everywhere before building pages:
 | 25 | Error Boundaries | NFR3 | Polish | HIGH |
 
 ---
-
-**How to use this file:**  
-Tell me "Step N" or "let's do Step N" and I'll implement it completely before moving on.

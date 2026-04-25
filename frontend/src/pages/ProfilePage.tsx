@@ -3,6 +3,7 @@ import { CheckCircle, Circle, Trash2, User, Lock, Bell, AlertTriangle } from 'lu
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { authService } from '@/services/authService'
+import { notificationService } from '@/services/notificationService'
 import { useAuthStore } from '@/store/authStore'
 import { ROUTES } from '@/constants/routes'
 import { api } from '@/services/apiClient'
@@ -14,7 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Modal, ModalContent, ModalHeader, ModalTitle, ModalDescription, ModalFooter } from '@/components/ui/modal'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import type { User as UserType } from '@/types'
+import type { User as UserType, NotificationPreferences } from '@/types'
 
 // ─── Password strength helpers ────────────────────────────────────────────────
 
@@ -246,22 +247,43 @@ function ChangePasswordTab() {
 
 // ─── Tab: Notification Preferences ───────────────────────────────────────────
 
-const NOTIFICATION_PREFS = [
+const NOTIFICATION_PREF_META: { id: keyof NotificationPreferences; label: string; description: string }[] = [
   { id: 'review_complete', label: 'Review complete', description: 'Notify when a code review finishes processing.' },
   { id: 'critical_issues', label: 'Critical issues found', description: 'Alert when critical severity issues are detected.' },
   { id: 'team_mentions', label: 'Team mentions', description: 'Notify when a teammate @mentions you in a comment.' },
 ]
 
 function NotificationPrefsTab() {
-  const [prefs, setPrefs] = useState<Record<string, boolean>>({
+  const [prefs, setPrefs] = useState<NotificationPreferences>({
     review_complete: true,
     critical_issues: true,
     team_mentions: false,
   })
+  const [isLoading, setIsLoading] = useState(true)
+  const [saving, setSaving] = useState<keyof NotificationPreferences | null>(null)
 
-  function toggle(id: string) {
-    setPrefs((p) => ({ ...p, [id]: !p[id] }))
-    toast.success('Preferences saved')
+  useEffect(() => {
+    notificationService.getPreferences()
+      .then((data) => setPrefs(data))
+      .catch(() => { /* keep defaults on failure */ })
+      .finally(() => setIsLoading(false))
+  }, [])
+
+  async function toggle(id: keyof NotificationPreferences) {
+    const next = { ...prefs, [id]: !prefs[id] }
+    setPrefs(next)
+    setSaving(id)
+    try {
+      const updated = await notificationService.updatePreferences({ [id]: next[id] })
+      setPrefs(updated)
+      toast.success('Preferences saved')
+    } catch (err: unknown) {
+      setPrefs(prefs)
+      const apiErr = err as { message?: string }
+      toast.error(apiErr?.message ?? 'Failed to save preferences')
+    } finally {
+      setSaving(null)
+    }
   }
 
   return (
@@ -271,32 +293,42 @@ function NotificationPrefsTab() {
         <CardDescription>Choose which notifications you want to receive.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {NOTIFICATION_PREFS.map((pref) => (
-          <div key={pref.id} className="flex items-start justify-between gap-4 py-2">
-            <div>
-              <p className="text-sm font-medium text-foreground">{pref.label}</p>
-              <p className="text-xs text-muted-foreground">{pref.description}</p>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={prefs[pref.id]}
-              onClick={() => toggle(pref.id)}
-              className={cn(
-                'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 border-transparent',
-                'transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                prefs[pref.id] ? 'bg-primary' : 'bg-muted',
-              )}
-            >
-              <span
+        {isLoading ? (
+          <>
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </>
+        ) : (
+          NOTIFICATION_PREF_META.map((pref) => (
+            <div key={pref.id} className="flex items-start justify-between gap-4 py-2">
+              <div>
+                <p className="text-sm font-medium text-foreground">{pref.label}</p>
+                <p className="text-xs text-muted-foreground">{pref.description}</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={prefs[pref.id]}
+                disabled={saving === pref.id}
+                onClick={() => void toggle(pref.id)}
                 className={cn(
-                  'pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg transition-transform duration-200',
-                  prefs[pref.id] ? 'translate-x-5' : 'translate-x-0.5',
+                  'relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 border-transparent',
+                  'transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                  prefs[pref.id] ? 'bg-primary' : 'bg-muted',
+                  saving === pref.id && 'opacity-60 cursor-not-allowed',
                 )}
-              />
-            </button>
-          </div>
-        ))}
+              >
+                <span
+                  className={cn(
+                    'pointer-events-none block h-4 w-4 rounded-full bg-white shadow-lg transition-transform duration-200',
+                    prefs[pref.id] ? 'translate-x-5' : 'translate-x-0.5',
+                  )}
+                />
+              </button>
+            </div>
+          ))
+        )}
       </CardContent>
     </Card>
   )

@@ -2,6 +2,8 @@ import { useLocation, Link } from 'react-router-dom'
 import { Bell, LogOut, User } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import ThemeToggle from './ThemeToggle'
+import NotificationPanel from './NotificationPanel'
+import { useNotifications } from '@/hooks/useNotifications'
 import { cn } from '@/lib/utils'
 import { useState } from 'react'
 
@@ -32,6 +34,8 @@ export default function Topbar() {
   const { user, logout } = useAuth()
   const breadcrumbs = useBreadcrumbs()
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications()
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-border bg-card px-4">
@@ -58,17 +62,39 @@ export default function Topbar() {
 
       {/* Right side actions */}
       <div className="flex items-center gap-1">
-        {/* Notification bell — wired up in Step 18 */}
-        <button
-          aria-label="Notifications"
-          className={cn(
-            'relative flex h-9 w-9 items-center justify-center rounded-md',
-            'text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        {/* Notification bell */}
+        <div className="relative">
+          <button
+            aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
+            aria-haspopup="dialog"
+            aria-expanded={notifOpen}
+            onClick={() => { setNotifOpen((o) => !o); setUserMenuOpen(false) }}
+            className={cn(
+              'relative flex h-9 w-9 items-center justify-center rounded-md',
+              'text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+            )}
+          >
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground leading-none">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+
+          {notifOpen && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setNotifOpen(false)} />
+              <NotificationPanel
+                notifications={notifications}
+                onMarkRead={(id) => void markRead(id)}
+                onMarkAllRead={() => void markAllRead()}
+                onClose={() => setNotifOpen(false)}
+              />
+            </>
           )}
-        >
-          <Bell size={18} />
-        </button>
+        </div>
 
         <ThemeToggle />
 
