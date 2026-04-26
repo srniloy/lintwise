@@ -13,7 +13,7 @@ export interface Notification {
   message: string
   isRead: boolean
   resourceId?: string
-  resourceType?: 'REVIEW' | 'SNIPPET' | 'COLLECTION'
+  resourceType?: 'review' | 'snippet' | 'collection' | 'team'
   createdAt: string
 }
 

@@ -14,8 +14,9 @@ const TYPE_ICON: Record<NotificationType, ReactNode> = {
 }
 
 function notificationHref(n: Notification): string | null {
-  if (n.resourceId) return `/review/${n.resourceId}`
-  return null
+  if (!n.resourceId) return null
+  if (n.resourceType === 'team' || n.type === 'TEAM_INVITE') return '/team'
+  return `/review/${n.resourceId}`
 }
 
 interface Props {

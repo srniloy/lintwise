@@ -30,6 +30,7 @@ import type { ExportFormat } from '@/services/reviewService'
 import { useThemeStore } from '@/store/themeStore'
 import { saveBlobAs } from '@/lib/download'
 import { ExportMenu } from '@/components/ExportMenu'
+import { commentService } from '@/services/commentService'
 import type { Review, Issue, IssueCategory, IssueSeverity } from '@/types/review'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -357,6 +358,7 @@ export default function ReviewDetailPage() {
   const [sevFilter, setSevFilter]       = useState<Set<IssueSeverity>>(new Set())
   const [catFilter, setCatFilter]       = useState<Set<IssueCategory>>(new Set())
   const [exporting, setExporting]       = useState(false)
+  const [commentCount, setCommentCount] = useState<number | null>(null)
   const { isPremium } = useAuth()
 
   // ── Fetch ────────────────────────────────────────────────────────────────────
@@ -370,6 +372,13 @@ export default function ReviewDetailPage() {
         setError(err?.message ?? 'Review not found')
         setLoading(false)
       })
+    commentService
+      .list(id)
+      .then((data) => {
+        const total = data.reduce((sum, c) => sum + 1 + (c.replies?.length ?? 0), 0)
+        setCommentCount(total)
+      })
+      .catch(() => {})
   }, [id])
 
   // ── CodeMirror language extension ────────────────────────────────────────────
@@ -549,6 +558,11 @@ export default function ReviewDetailPage() {
           <TabsTrigger value="comments">
             <span className="flex items-center gap-1.5">
               Comments
+              {commentCount !== null && commentCount > 0 && (
+                <span className="rounded-full bg-muted px-1.5 py-px text-[10px] font-semibold text-muted-foreground data-[state=active]:bg-background">
+                  {commentCount > 100 ? '100+' : commentCount}
+                </span>
+              )}
               {!isPremium && <Lock size={11} className="text-muted-foreground" />}
             </span>
           </TabsTrigger>
@@ -791,7 +805,7 @@ export default function ReviewDetailPage() {
         {/* ══ Comments tab ═════════════════════════════════════════════════════ */}
         <TabsContent value="comments" className="mt-4">
           {isPremium ? (
-            <CommentsPanel reviewId={review.id} />
+            <CommentsPanel reviewId={review.id} onCountChange={setCommentCount} />
           ) : (
             <div className="flex flex-col items-center gap-3 rounded-xl border border-border py-16 text-center">
               <Lock className="h-10 w-10 text-muted-foreground opacity-30" />

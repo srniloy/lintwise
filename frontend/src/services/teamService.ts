@@ -15,7 +15,7 @@ export const teamService = {
     api.delete<void>(`/teams/${teamId}/members/${userId}`),
 
   acceptInvite: (token: string) =>
-    api.get<Team>(`/teams/invite/accept?token=${encodeURIComponent(token)}`),
+    api.get<{ message: string }>(`/teams/invite/accept?token=${encodeURIComponent(token)}`),
 
   transferOwnership: (teamId: string, newOwnerId: string) =>
     api.put<Team>(`/teams/${teamId}/transfer-ownership`, { newOwnerId }),

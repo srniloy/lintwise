@@ -211,6 +211,19 @@ export class ReviewsService {
     return { reviews, total, page, limit };
   }
 
+  // ── Access check ─────────────────────────────────────────────────────────
+
+  private async assertCanRead(reviewOwnerId: string, requesterId: string): Promise<void> {
+    if (reviewOwnerId === requesterId) return;
+    const [requesterTeam, ownerTeam] = await Promise.all([
+      this.prisma.teamMember.findFirst({ where: { userId: requesterId }, select: { teamId: true } }),
+      this.prisma.teamMember.findFirst({ where: { userId: reviewOwnerId }, select: { teamId: true } }),
+    ]);
+    if (!requesterTeam || !ownerTeam || requesterTeam.teamId !== ownerTeam.teamId) {
+      throw new ForbiddenException('Access denied');
+    }
+  }
+
   // ── Read ──────────────────────────────────────────────────────────────────
 
   async getStatus(
@@ -223,7 +236,7 @@ export class ReviewsService {
     });
 
     if (!review) throw new NotFoundException('Review not found');
-    if (review.userId !== userId) throw new ForbiddenException('Access denied');
+    await this.assertCanRead(review.userId, userId);
 
     return { id: review.id, status: review.status, createdAt: review.createdAt, updatedAt: review.updatedAt };
   }
@@ -238,7 +251,7 @@ export class ReviewsService {
     });
 
     if (!review) throw new NotFoundException('Review not found');
-    if (review.userId !== userId) throw new ForbiddenException('Access denied');
+    await this.assertCanRead(review.userId, userId);
 
     return review;
   }
@@ -249,7 +262,10 @@ export class ReviewsService {
   ): Promise<Review & { issues: Issue[] }> {
     const cacheKey = `review:result:${reviewId}`;
     const cached = await this.cache.get<Review & { issues: Issue[] }>(cacheKey);
-    if (cached) return cached;
+    if (cached) {
+      await this.assertCanRead(cached.userId, userId);
+      return cached;
+    }
 
     const review = await this.prisma.review.findUnique({
       where: { id: reviewId },
@@ -257,7 +273,7 @@ export class ReviewsService {
     });
 
     if (!review) throw new NotFoundException('Review not found');
-    if (review.userId !== userId) throw new ForbiddenException('Access denied');
+    await this.assertCanRead(review.userId, userId);
 
     await this.cache.set(cacheKey, review, TTL.REVIEW);
     return review;

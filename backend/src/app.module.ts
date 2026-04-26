@@ -21,6 +21,8 @@ import { SnippetsModule } from './snippets/snippets.module';
 import { CollectionsModule } from './collections/collections.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { TeamsModule } from './teams/teams.module';
+import { CommentsModule } from './comments/comments.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -75,6 +77,8 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
     CollectionsModule,
     AnalyticsModule,
     NotificationsModule,
+    TeamsModule,
+    CommentsModule,
   ],
 
   controllers: [AppController],

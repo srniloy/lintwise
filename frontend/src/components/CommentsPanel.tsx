@@ -15,9 +15,10 @@ const POLL_MS = 30_000
 
 interface Props {
   reviewId: string
+  onCountChange?: (count: number) => void
 }
 
-export default function CommentsPanel({ reviewId }: Props) {
+export default function CommentsPanel({ reviewId, onCountChange }: Props) {
   const { user } = useAuth()
   const [comments, setComments] = useState<Comment[]>([])
   const [members, setMembers] = useState<TeamMember[]>([])
@@ -44,6 +45,8 @@ export default function CommentsPanel({ reviewId }: Props) {
     try {
       const data = await commentService.list(reviewId)
       setComments(data)
+      const total = data.reduce((sum, c) => sum + 1 + (c.replies?.length ?? 0), 0)
+      onCountChange?.(total)
     } catch { /* silent */ }
     finally { if (initial) setLoading(false) }
   }
@@ -51,7 +54,14 @@ export default function CommentsPanel({ reviewId }: Props) {
   function handleDelete(commentId: string) {
     commentService
       .delete(commentId)
-      .then(() => setComments((prev) => pruneComment(prev, commentId)))
+      .then(() => {
+        setComments((prev) => {
+          const next = pruneComment(prev, commentId)
+          const total = next.reduce((sum, c) => sum + 1 + (c.replies?.length ?? 0), 0)
+          onCountChange?.(total)
+          return next
+        })
+      })
       .catch((err: unknown) =>
         toast.error((err as { message?: string })?.message ?? 'Delete failed'),
       )
@@ -64,17 +74,18 @@ export default function CommentsPanel({ reviewId }: Props) {
   }
 
   function handlePosted(comment: Comment) {
-    if (comment.parentId) {
-      setComments((prev) =>
-        prev.map((c) =>
-          c.id === comment.parentId
-            ? { ...c, replies: [...(c.replies ?? []), comment] }
-            : c,
-        ),
-      )
-    } else {
-      setComments((prev) => [...prev, comment])
-    }
+    setComments((prev) => {
+      const next = comment.parentId
+        ? prev.map((c) =>
+            c.id === comment.parentId
+              ? { ...c, replies: [...(c.replies ?? []), comment] }
+              : c,
+          )
+        : [...prev, comment]
+      const total = next.reduce((sum, c) => sum + 1 + (c.replies?.length ?? 0), 0)
+      onCountChange?.(total)
+      return next
+    })
     setReplyTo(null)
   }
 

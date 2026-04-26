@@ -33,7 +33,11 @@ export default function TeamAcceptPage() {
       .catch((err: unknown) => {
         setState('error')
         const msg =
-          err instanceof Error ? err.message : 'Failed to accept invitation.'
+          err instanceof Error
+            ? err.message
+            : typeof err === 'object' && err !== null && 'message' in err
+              ? String((err as { message: unknown }).message)
+              : 'Failed to accept invitation.'
         setMessage(msg)
       })
   }, [navigate, searchParams])

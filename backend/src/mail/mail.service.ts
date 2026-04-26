@@ -189,4 +189,45 @@ export class MailService {
       </div>`,
     );
   }
+
+  async sendTeamInviteEmail(
+    email: string,
+    teamName: string,
+    token: string,
+  ): Promise<void> {
+    const url = `${this.frontendUrl}/team/accept?token=${token}`;
+    await this.send(
+      email,
+      `You've been invited to join ${teamName} on LintWise`,
+      `<div style="font-family:sans-serif;max-width:600px;margin:auto">
+        <h2>Team Invitation</h2>
+        <p>You've been invited to join <strong>${teamName}</strong> on LintWise. Click the button below to accept — this invite expires in 24 hours.</p>
+        <a href="${url}" style="display:inline-block;padding:12px 24px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:6px;margin:16px 0">
+          Accept Invitation
+        </a>
+        <p style="color:#6b7280;font-size:14px">Or copy this link: ${url}</p>
+        <p style="color:#6b7280;font-size:12px">If you weren't expecting this invitation, you can ignore this email.</p>
+      </div>`,
+    );
+  }
+
+  async sendMentionEmail(
+    email: string,
+    name: string,
+    mentionedBy: string,
+    reviewId: string,
+  ): Promise<void> {
+    const url = `${this.frontendUrl}/review/${reviewId}`;
+    await this.send(
+      email,
+      `${mentionedBy} mentioned you in a code review`,
+      `<div style="font-family:sans-serif;max-width:600px;margin:auto">
+        <h2>You were mentioned</h2>
+        <p>Hi ${name}, <strong>${mentionedBy}</strong> mentioned you in a comment on a code review.</p>
+        <a href="${url}" style="display:inline-block;padding:12px 24px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:6px;margin:16px 0">
+          View Comment
+        </a>
+      </div>`,
+    );
+  }
 }
