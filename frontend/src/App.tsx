@@ -27,6 +27,7 @@ const SnippetsPage        = lazy(() => import('@/pages/SnippetsPage'))
 const CollectionsPage     = lazy(() => import('@/pages/CollectionsPage'))
 const ProfilePage         = lazy(() => import('@/pages/ProfilePage'))
 const TeamPage            = lazy(() => import('@/pages/TeamPage'))
+const TeamAcceptPage      = lazy(() => import('@/pages/TeamAcceptPage'))
 const AdminPage           = lazy(() => import('@/pages/AdminPage'))
 const NotFoundPage        = lazy(() => import('@/pages/NotFoundPage'))
 
@@ -69,6 +70,9 @@ export default function App() {
 
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
+              {/* Standalone accept-invite page (no sidebar) */}
+              <Route path={ROUTES.TEAM_ACCEPT} element={<TeamAcceptPage />} />
+
               <Route element={<AppLayout />}>
                 <Route path={ROUTES.DASHBOARD}   element={<DashboardPage />} />
                 <Route path={ROUTES.REVIEW_NEW}  element={<ReviewNewPage />} />

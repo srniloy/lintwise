@@ -2,6 +2,7 @@ export type * from './auth'
 export type * from './review'
 export type * from './snippet'
 export type * from './notification'
+export type * from './team'
 
 export interface ApiError {
   message: string

@@ -21,6 +21,7 @@ import {
   AlertCircle,
   PartyPopper,
   X,
+  Lock,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { ROUTES } from '@/constants/routes'
@@ -37,6 +38,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
 import { cn } from '@/lib/utils'
+import { useAuth } from '@/hooks/useAuth'
+import CommentsPanel from '@/components/CommentsPanel'
 
 // ── Grade helpers ──────────────────────────────────────────────────────────────
 
@@ -354,6 +357,7 @@ export default function ReviewDetailPage() {
   const [sevFilter, setSevFilter]       = useState<Set<IssueSeverity>>(new Set())
   const [catFilter, setCatFilter]       = useState<Set<IssueCategory>>(new Set())
   const [exporting, setExporting]       = useState(false)
+  const { isPremium } = useAuth()
 
   // ── Fetch ────────────────────────────────────────────────────────────────────
 
@@ -493,7 +497,7 @@ export default function ReviewDetailPage() {
             Reviews
           </button>
           <ChevronRight className="h-3.5 w-3.5" />
-          <span className="text-foreground truncate max-w-[260px]">
+          <span className="text-foreground truncate max-w-65">
             {review.title ?? 'Untitled Review'}
           </span>
         </div>
@@ -542,6 +546,12 @@ export default function ReviewDetailPage() {
             )}
           </TabsTrigger>
           <TabsTrigger value="code">Code</TabsTrigger>
+          <TabsTrigger value="comments">
+            <span className="flex items-center gap-1.5">
+              Comments
+              {!isPremium && <Lock size={11} className="text-muted-foreground" />}
+            </span>
+          </TabsTrigger>
         </TabsList>
 
         {/* ══ Summary tab ══════════════════════════════════════════════════════ */}
@@ -776,6 +786,23 @@ export default function ReviewDetailPage() {
               />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ══ Comments tab ═════════════════════════════════════════════════════ */}
+        <TabsContent value="comments" className="mt-4">
+          {isPremium ? (
+            <CommentsPanel reviewId={review.id} />
+          ) : (
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-border py-16 text-center">
+              <Lock className="h-10 w-10 text-muted-foreground opacity-30" />
+              <div>
+                <p className="font-semibold text-foreground">Premium Feature</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Upgrade to Premium to collaborate with your team through comments.
+                </p>
+              </div>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

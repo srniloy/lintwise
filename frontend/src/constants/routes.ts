@@ -18,6 +18,7 @@ export const ROUTES = {
 
   // Premium
   TEAM: '/team',
+  TEAM_ACCEPT: '/team/accept',
 
   // Admin
   ADMIN: '/admin',
