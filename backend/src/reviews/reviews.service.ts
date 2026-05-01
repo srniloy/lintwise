@@ -11,6 +11,7 @@ import { CacheService, TTL } from '../cache/cache.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { MailService } from '../mail/mail.service';
+import { WebhooksService } from '../webhooks/webhooks.service';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReviewFilterDto } from './dto/review-filter.dto';
 import type { Review, Issue } from '@prisma/client';
@@ -26,6 +27,7 @@ export class ReviewsService {
     private readonly analytics: AnalyticsService,
     private readonly notifications: NotificationsService,
     private readonly mail: MailService,
+    private readonly webhooks: WebhooksService,
   ) {}
 
   // ── Create ────────────────────────────────────────────────────────────────
@@ -106,6 +108,17 @@ export class ReviewsService {
       // Analytics cache now stale — refresh on next dashboard request
       await this.analytics.bustUserCache(review.userId).catch(() => void 0);
 
+      // Webhook dispatch — REVIEW_COMPLETED + (optionally) CRITICAL_ISSUE_FOUND
+      void this.webhooks
+        .dispatch(review.userId, 'REVIEW_COMPLETED', {
+          event: 'REVIEW_COMPLETED',
+          reviewId,
+          score: result.overallScore,
+          issueCount: result.issues.length,
+          createdAt: new Date().toISOString(),
+        })
+        .catch((err: unknown) => this.logger.warn(`Webhook dispatch (REVIEW_COMPLETED) failed: ${String(err)}`));
+
       // In-app notification: review complete
       void this.notifications
         .create(
@@ -135,6 +148,15 @@ export class ReviewsService {
             this.mail.sendCriticalIssueEmail(email, name, reviewId, criticalCount, token),
           )
           .catch(() => void 0);
+
+        void this.webhooks
+          .dispatch(review.userId, 'CRITICAL_ISSUE_FOUND', {
+            event: 'CRITICAL_ISSUE_FOUND',
+            reviewId,
+            criticalCount,
+            createdAt: new Date().toISOString(),
+          })
+          .catch((err: unknown) => this.logger.warn(`Webhook dispatch (CRITICAL_ISSUE_FOUND) failed: ${String(err)}`));
       }
 
       // Email notification: review complete (only if not sending critical issues email)
@@ -161,6 +183,15 @@ export class ReviewsService {
           { resourceId: reviewId, resourceType: 'REVIEW' },
         )
         .catch(() => void 0);
+
+      // Webhook dispatch: REVIEW_FAILED
+      void this.webhooks
+        .dispatch(review.userId, 'REVIEW_FAILED', {
+          event: 'REVIEW_FAILED',
+          reviewId,
+          createdAt: new Date().toISOString(),
+        })
+        .catch((werr: unknown) => this.logger.warn(`Webhook dispatch (REVIEW_FAILED) failed: ${String(werr)}`));
 
       this.logger.error(`Review ${reviewId} failed`, err);
       throw err;

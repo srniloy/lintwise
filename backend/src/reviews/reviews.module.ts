@@ -7,9 +7,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { MailModule } from '../mail/mail.module';
+import { WebhooksModule } from '../webhooks/webhooks.module';
 
 @Module({
-  imports: [PrismaModule, GeminiModule, AnalyticsModule, NotificationsModule, MailModule],
+  imports: [PrismaModule, GeminiModule, AnalyticsModule, NotificationsModule, MailModule, WebhooksModule],
   controllers: [ReviewsController],
   providers: [ReviewsService, ExportService],
   exports: [ReviewsService, ExportService],

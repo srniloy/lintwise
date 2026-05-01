@@ -10,6 +10,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { GeminiService } from '../gemini/gemini.service';
 import { CacheService } from '../cache/cache.service';
 import { AnalyticsService } from '../analytics/analytics.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { MailService } from '../mail/mail.service';
+import { WebhooksService } from '../webhooks/webhooks.service';
 import type { AIReviewResult } from '../gemini/gemini.types';
 
 // ── Factories ─────────────────────────────────────────────────────────────────
@@ -100,6 +103,21 @@ const mockAnalytics = {
   bustUserCache: jest.fn().mockResolvedValue(undefined),
 };
 
+const mockNotifications = {
+  create: jest.fn().mockResolvedValue(undefined),
+  sendEmailIfEnabled: jest.fn().mockResolvedValue(undefined),
+};
+
+const mockMail = {
+  sendReviewCompleteEmail: jest.fn().mockResolvedValue(undefined),
+  sendCriticalIssueEmail: jest.fn().mockResolvedValue(undefined),
+  sendReviewFailedEmail: jest.fn().mockResolvedValue(undefined),
+};
+
+const mockWebhooks = {
+  dispatch: jest.fn().mockResolvedValue(undefined),
+};
+
 // ── Suite ─────────────────────────────────────────────────────────────────────
 
 describe('ReviewsService', () => {
@@ -121,6 +139,9 @@ describe('ReviewsService', () => {
         { provide: GeminiService, useValue: mockGemini },
         { provide: CacheService, useValue: mockCache },
         { provide: AnalyticsService, useValue: mockAnalytics },
+        { provide: NotificationsService, useValue: mockNotifications },
+        { provide: MailService, useValue: mockMail },
+        { provide: WebhooksService, useValue: mockWebhooks },
       ],
     }).compile();
 
