@@ -24,6 +24,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { TeamsModule } from './teams/teams.module';
 import { CommentsModule } from './comments/comments.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { AdminModule } from './admin/admin.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -81,6 +82,7 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
     TeamsModule,
     CommentsModule,
     WebhooksModule,
+    AdminModule,
   ],
 
   controllers: [AppController],

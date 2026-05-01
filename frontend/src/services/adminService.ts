@@ -90,10 +90,10 @@ export const adminService = {
     api.put<AdminUser>(`/admin/users/${userId}/role`, { role }),
 
   suspendUser: (userId: string) =>
-    api.post<AdminUser>(`/admin/users/${userId}/suspend`),
+    api.put<AdminUser>(`/admin/users/${userId}/suspend`),
 
   unsuspendUser: (userId: string) =>
-    api.post<AdminUser>(`/admin/users/${userId}/unsuspend`),
+    api.put<AdminUser>(`/admin/users/${userId}/unsuspend`),
 
   deleteUser: (userId: string) =>
     api.delete<void>(`/admin/users/${userId}`),

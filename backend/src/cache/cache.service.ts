@@ -103,4 +103,17 @@ export class CacheService implements OnModuleInit, OnModuleDestroy {
       await this.client.del(...keys);
     }
   }
+
+  /** Returns the round-trip latency in ms, or null if Redis is unreachable. */
+  async ping(): Promise<number | null> {
+    if (!this.client) return null;
+    const start = Date.now();
+    try {
+      const reply = await this.client.ping();
+      if (reply !== 'PONG') return null;
+      return Date.now() - start;
+    } catch {
+      return null;
+    }
+  }
 }
