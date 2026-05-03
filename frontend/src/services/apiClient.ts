@@ -1,7 +1,34 @@
 import type { ApiError } from '@/types'
+import { toast } from 'sonner'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1'
 
+// ── GET response cache (5-minute TTL) ─────────────────────────────────────────
+const CACHE_TTL_MS = 5 * 60 * 1000
+
+interface CacheEntry {
+  data: unknown
+  ts: number
+}
+
+const requestCache = new Map<string, CacheEntry>()
+
+export function invalidateCache(pattern?: string) {
+  if (!pattern) {
+    requestCache.clear()
+    return
+  }
+  for (const key of requestCache.keys()) {
+    if (key.includes(pattern)) requestCache.delete(key)
+  }
+}
+
+function getCacheKey(endpoint: string): string {
+  const token = getAccessToken()
+  return `${token ?? 'anon'}::${endpoint}`
+}
+
+// ── Auth token ────────────────────────────────────────────────────────────────
 function getAccessToken(): string | null {
   try {
     const raw = localStorage.getItem('lintwise-auth')
@@ -13,11 +40,22 @@ function getAccessToken(): string | null {
   }
 }
 
+// ── Core request ──────────────────────────────────────────────────────────────
 async function request<T>(
   endpoint: string,
   options: RequestInit = {},
+  useCache = false,
 ): Promise<T> {
   const token = getAccessToken()
+
+  // Serve from cache for GET requests
+  if (useCache) {
+    const cacheKey = getCacheKey(endpoint)
+    const cached = requestCache.get(cacheKey)
+    if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
+      return cached.data as T
+    }
+  }
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -38,6 +76,12 @@ async function request<T>(
     if (res.status === 401) {
       localStorage.removeItem('lintwise-auth')
       window.location.href = '/login'
+    } else if (res.status === 429) {
+      const retryAfter = res.headers.get('retry-after')
+      const wait = retryAfter ? ` Retry in ${retryAfter}s.` : ''
+      toast.error(`Rate limit exceeded.${wait}`)
+    } else if (res.status >= 500) {
+      toast.error('Server error — please try again later.')
     }
 
     throw errorBody
@@ -53,11 +97,20 @@ async function request<T>(
     'status' in json &&
     'data' in json
   ) {
-    return (json as { status: string; data: T }).data
+    const data = (json as { status: string; data: T }).data
+    if (useCache) {
+      requestCache.set(getCacheKey(endpoint), { data, ts: Date.now() })
+    }
+    return data
+  }
+
+  if (useCache) {
+    requestCache.set(getCacheKey(endpoint), { data: json, ts: Date.now() })
   }
   return json as T
 }
 
+// ── Download ──────────────────────────────────────────────────────────────────
 async function download(endpoint: string): Promise<{ blob: Blob; filename: string }> {
   const token = getAccessToken()
   const res = await fetch(`${BASE_URL}${endpoint}`, {
@@ -68,6 +121,10 @@ async function download(endpoint: string): Promise<{ blob: Blob; filename: strin
     if (res.status === 401) {
       localStorage.removeItem('lintwise-auth')
       window.location.href = '/login'
+    } else if (res.status === 429) {
+      toast.error('Rate limit exceeded. Please wait before downloading again.')
+    } else if (res.status >= 500) {
+      toast.error('Server error — download failed.')
     }
     let message = `Download failed (${res.status})`
     try {
@@ -86,9 +143,13 @@ async function download(endpoint: string): Promise<{ blob: Blob; filename: strin
   return { blob, filename }
 }
 
+// ── Public API ────────────────────────────────────────────────────────────────
 export const api = {
-  get: <T>(endpoint: string, options?: RequestInit) =>
-    request<T>(endpoint, { method: 'GET', ...options }),
+  /** GET with optional 5-minute cache. Pass `{ cache: true }` to enable. */
+  get: <T>(endpoint: string, options?: RequestInit & { cache?: boolean }) => {
+    const { cache = false, ...rest } = options ?? {}
+    return request<T>(endpoint, { method: 'GET', ...rest }, cache)
+  },
 
   post: <T>(endpoint: string, body?: unknown, options?: RequestInit) =>
     request<T>(endpoint, {

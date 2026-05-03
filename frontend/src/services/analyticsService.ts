@@ -45,8 +45,8 @@ export interface TeamStats {
 
 export const analyticsService = {
   getPersonal: (range: AnalyticsRange) =>
-    api.get<PersonalStats>(`/analytics/personal?range=${range}`),
+    api.get<PersonalStats>(`/analytics/personal?range=${range}`, { cache: true }),
 
   getTeam: (range: AnalyticsRange) =>
-    api.get<TeamStats>(`/analytics/team?range=${range}`),
+    api.get<TeamStats>(`/analytics/team?range=${range}`, { cache: true }),
 }

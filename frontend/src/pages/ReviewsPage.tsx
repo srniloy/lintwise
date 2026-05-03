@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Search,
@@ -150,7 +150,7 @@ interface ReviewRowProps {
   onDelete: (id: string) => void
 }
 
-function ReviewRow({ review, selected, selectable, onSelect, onNavigate, onDelete }: ReviewRowProps) {
+const ReviewRow = memo(function ReviewRow({ review, selected, selectable, onSelect, onNavigate, onDelete }: ReviewRowProps) {
   const issueCount = review.issues?.length
   const score = review.overallScore
   const grade = score != null ? getGrade(score) : null
@@ -265,7 +265,7 @@ function ReviewRow({ review, selected, selectable, onSelect, onNavigate, onDelet
       )}
     </div>
   )
-}
+})
 
 // ── Pagination ────────────────────────────────────────────────────────────────
 
@@ -718,7 +718,7 @@ export default function ReviewsPage() {
     <div className="mx-auto max-w-5xl space-y-5 p-6">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Review History</h1>
           {!loading && (

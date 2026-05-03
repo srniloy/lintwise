@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, memo, useRef } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { useParams, useNavigate, Navigate } from 'react-router-dom'
 import CodeMirror from '@uiw/react-codemirror'
 import { loadLanguage } from '@uiw/codemirror-extensions-langs'
@@ -119,6 +120,7 @@ function ScoreRing({ score }: { score: number }) {
         <svg
           width="128" height="128" viewBox="0 0 128 128"
           className="-rotate-90"
+          role="img"
           aria-label={`Score: ${score} out of 100`}
         >
           {/* Track */}
@@ -240,8 +242,10 @@ function FilterChip({
     <button
       type="button"
       onClick={onToggle}
+      aria-pressed={active}
       className={cn(
         'inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium transition-all',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         active
           ? 'border-primary bg-primary text-primary-foreground'
           : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground',
@@ -254,7 +258,7 @@ function FilterChip({
 
 // ── IssueCard ─────────────────────────────────────────────────────────────────
 
-function IssueCard({
+const IssueCard = memo(function IssueCard({
   issue,
   expanded,
   onToggle,
@@ -282,9 +286,10 @@ function IssueCard({
       {/* Header */}
       <button
         type="button"
-        className="flex w-full items-start gap-3 p-4 text-left hover:bg-muted/30 transition-colors"
+        className="flex w-full items-start gap-3 p-4 text-left hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         onClick={onToggle}
         aria-expanded={expanded}
+        aria-label={`${expanded ? 'Collapse' : 'Expand'} issue: ${issue.title}`}
       >
         <Badge variant={SEVERITY_VARIANT[issue.severity]} className="mt-0.5 shrink-0 uppercase">
           {issue.severity.toLowerCase()}
@@ -339,6 +344,64 @@ function IssueCard({
           )}
         </div>
       )}
+    </div>
+  )
+})
+
+// ── VirtualIssueList ──────────────────────────────────────────────────────────
+
+const ESTIMATED_ITEM_HEIGHT = 72 // collapsed card height estimate
+
+function VirtualIssueList({
+  issues,
+  expandedIds,
+  onToggle,
+}: {
+  issues: Issue[]
+  expandedIds: Set<string>
+  onToggle: (id: string) => void
+}) {
+  const parentRef = useRef<HTMLDivElement>(null)
+
+  const virtualizer = useVirtualizer({
+    count: issues.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ESTIMATED_ITEM_HEIGHT,
+    overscan: 5,
+  })
+
+  return (
+    <div
+      ref={parentRef}
+      style={{ height: Math.min(issues.length * ESTIMATED_ITEM_HEIGHT, 600), overflow: 'auto' }}
+      className="rounded-lg"
+    >
+      <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const issue = issues[virtualRow.index]
+          return (
+            <div
+              key={issue.id}
+              data-index={virtualRow.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualRow.start}px)`,
+                paddingBottom: '0.5rem',
+              }}
+            >
+              <IssueCard
+                issue={issue}
+                expanded={expandedIds.has(issue.id)}
+                onToggle={() => onToggle(issue.id)}
+              />
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -570,10 +633,10 @@ export default function ReviewDetailPage() {
 
         {/* ══ Summary tab ══════════════════════════════════════════════════════ */}
         <TabsContent value="summary" className="mt-4 space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
 
             {/* Score card */}
-            <Card className="flex items-center justify-center py-6 sm:col-span-1">
+            <Card className="flex items-center justify-center py-6 md:col-span-1">
               <CardContent className="p-0">
                 {review.overallScore != null
                   ? <ScoreRing score={review.overallScore} />
@@ -587,7 +650,7 @@ export default function ReviewDetailPage() {
             </Card>
 
             {/* Quick stats */}
-            <Card className="sm:col-span-2">
+            <Card className="md:col-span-2">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Analysis Summary</CardTitle>
               </CardHeader>
@@ -744,16 +807,25 @@ export default function ReviewDetailPage() {
                 <p className="py-8 text-center text-sm text-muted-foreground">
                   No issues match the selected filters.
                 </p>
-              ) : (
-                <div className="space-y-2">
-                  {/* Sorted: CRITICAL → HIGH → MEDIUM → LOW */}
-                  {[...filteredIssues]
-                    .sort(
-                      (a, b) =>
-                        SEVERITY_ORDER.indexOf(a.severity) -
-                        SEVERITY_ORDER.indexOf(b.severity),
-                    )
-                    .map((issue) => (
+              ) : (() => {
+                const sorted = [...filteredIssues].sort(
+                  (a, b) =>
+                    SEVERITY_ORDER.indexOf(a.severity) -
+                    SEVERITY_ORDER.indexOf(b.severity),
+                )
+                // Virtualize when list is long enough to benefit
+                if (sorted.length > 20) {
+                  return (
+                    <VirtualIssueList
+                      issues={sorted}
+                      expandedIds={expandedIds}
+                      onToggle={toggleExpanded}
+                    />
+                  )
+                }
+                return (
+                  <div className="space-y-2">
+                    {sorted.map((issue) => (
                       <IssueCard
                         key={issue.id}
                         issue={issue}
@@ -761,15 +833,16 @@ export default function ReviewDetailPage() {
                         onToggle={() => toggleExpanded(issue.id)}
                       />
                     ))}
-                </div>
-              )}
+                  </div>
+                )
+              })()}
             </>
           )}
         </TabsContent>
 
         {/* ══ Code tab ═════════════════════════════════════════════════════════ */}
         <TabsContent value="code" className="mt-4">
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden overflow-x-auto">
             <CardHeader className="border-b border-border py-3 px-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
