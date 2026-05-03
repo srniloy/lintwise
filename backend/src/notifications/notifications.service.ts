@@ -146,7 +146,11 @@ export class NotificationsService {
     dto: NotificationPreferencesDto,
   ): Promise<NotificationPrefsRecord> {
     const current = await this.getPreferences(userId);
-    const merged: NotificationPrefsRecord = { ...current, ...dto };
+    // Only merge fields explicitly provided in the request (skip undefined optional fields)
+    const patch = Object.fromEntries(
+      Object.entries(dto).filter(([, v]) => v !== undefined),
+    ) as Partial<NotificationPrefsRecord>;
+    const merged: NotificationPrefsRecord = { ...current, ...patch };
 
     await this.prisma.user.update({
       where: { id: userId },

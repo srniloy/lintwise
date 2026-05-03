@@ -4,6 +4,7 @@ import { CacheService, TTL } from './cache.service';
 
 // ── Redis mock ─────────────────────────────────────────────────────────────
 const mockRedisInstance = {
+  status: 'ready',           // makes CacheService.isReady return true
   get: jest.fn(),
   set: jest.fn(),
   setex: jest.fn(),

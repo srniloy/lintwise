@@ -47,6 +47,9 @@ const mockPrisma = {
   issue: {
     createMany: jest.fn().mockResolvedValue({ count: 0 }),
   },
+  teamMember: {
+    findFirst: jest.fn().mockResolvedValue(null), // null → ForbiddenException in assertCanRead
+  },
   $transaction: jest.fn().mockImplementation((ops: any[]) => Promise.all(ops)),
 };
 

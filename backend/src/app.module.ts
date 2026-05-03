@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 
 import { AppController } from './app.controller';
@@ -25,6 +25,7 @@ import { TeamsModule } from './teams/teams.module';
 import { CommentsModule } from './comments/comments.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { AdminModule } from './admin/admin.module';
+import { HealthModule } from './health/health.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
@@ -83,6 +84,7 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
     CommentsModule,
     WebhooksModule,
     AdminModule,
+    HealthModule,
   ],
 
   controllers: [AppController],
@@ -90,7 +92,8 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
   providers: [
     AppService,
 
-    // ── Global guards (applied in order: JWT first, then Roles) ───
+    // ── Global guards (applied in order: Throttler, JWT, then Roles) ───
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
 

@@ -15,12 +15,37 @@ async function bootstrap() {
   // ── Security headers ──────────────────────────────────────────────
   app.use(
     helmet({
+      // X-Frame-Options: DENY — prevent clickjacking
+      frameguard: { action: 'deny' },
+
+      // X-Content-Type-Options: nosniff — prevent MIME-type sniffing
+      noSniff: true,
+
+      // Strict-Transport-Security: enforce HTTPS for 1 year, include sub-domains
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
+      },
+
+      // X-XSS-Protection: legacy browsers (modern CSP supersedes this)
+      xssFilter: true,
+
+      // Referrer-Policy: only send referrer on same origin
+      referrerPolicy: { policy: 'same-origin' },
+
+      // Content-Security-Policy
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
           scriptSrc: ["'self'", "'unsafe-inline'"], // required for Swagger UI
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", 'data:'],
+          connectSrc: ["'self'"],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          frameSrc: ["'none'"],
+          upgradeInsecureRequests: [],
         },
       },
     }),

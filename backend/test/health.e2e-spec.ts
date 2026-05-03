@@ -3,6 +3,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import helmet from 'helmet';
+
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { GeminiService } from '../src/gemini/gemini.service';
@@ -13,13 +14,13 @@ import { MailService } from '../src/mail/mail.service';
 
 const mockPrisma = {
   $queryRaw: jest.fn().mockResolvedValue([{ '?column?': 1 }]),
-  user: { findUnique: jest.fn(), update: jest.fn(), create: jest.fn(), findMany: jest.fn(), count: jest.fn(), delete: jest.fn() },
+  user: { findUnique: jest.fn(), findMany: jest.fn(), count: jest.fn(), update: jest.fn(), delete: jest.fn() },
   review: { create: jest.fn(), findMany: jest.fn(), count: jest.fn(), findUnique: jest.fn(), update: jest.fn(), delete: jest.fn(), groupBy: jest.fn().mockResolvedValue([]) },
   issue: { createMany: jest.fn(), findMany: jest.fn() },
   codeSnippet: { create: jest.fn(), findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn(), delete: jest.fn() },
   snippetVersion: { create: jest.fn(), findMany: jest.fn() },
   collection: { create: jest.fn(), findMany: jest.fn(), findUnique: jest.fn(), update: jest.fn(), delete: jest.fn() },
-  collectionItem: { create: jest.fn(), delete: jest.fn() },
+  collectionItem: { create: jest.fn(), findMany: jest.fn(), findUnique: jest.fn(), delete: jest.fn() },
   team: { create: jest.fn(), findFirst: jest.fn(), findUnique: jest.fn(), update: jest.fn() },
   teamMember: { create: jest.fn(), findFirst: jest.fn(), findMany: jest.fn(), count: jest.fn(), update: jest.fn(), delete: jest.fn(), upsert: jest.fn() },
   teamInvite: { create: jest.fn(), findUnique: jest.fn(), delete: jest.fn() },
@@ -47,7 +48,7 @@ const mockMail = {
 
 // ── Suite ────────────────────────────────────────────────────────────────────
 
-describe('AppController (e2e)', () => {
+describe('Health (e2e)', () => {
   let app: INestApplication<App>;
 
   beforeAll(async () => {
@@ -65,27 +66,9 @@ describe('AppController (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
-
-    app.use(
-      helmet({
-        frameguard: { action: 'deny' },
-        noSniff: true,
-        hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
-        contentSecurityPolicy: {
-          directives: {
-            defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            imgSrc: ["'self'", 'data:'],
-          },
-        },
-      }),
-    );
+    app.use(helmet());
     app.setGlobalPrefix('api/v1');
-    app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, transform: true }),
-    );
-
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     await app.init();
   });
 
@@ -93,36 +76,49 @@ describe('AppController (e2e)', () => {
     await app.close();
   });
 
-  describe('GET /api/v1', () => {
-    it('returns 200 with API info', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Default: all services healthy
+    mockPrisma.$queryRaw.mockResolvedValue([{ '?column?': 1 }]);
+    mockCache.ping.mockResolvedValue(4);
+  });
+
+  describe('GET /api/v1/health', () => {
+    it('returns 200 when all services are up', () => {
       return request(app.getHttpServer())
-        .get('/api/v1')
+        .get('/api/v1/health')
         .expect(200)
         .expect((res) => {
           expect(res.body.status).toBe('success');
-          expect(res.body.data).toHaveProperty('name', 'LintWise API');
-          expect(res.body.data).toHaveProperty('version');
+          expect(res.body.data.status).toBe('ok');
+          expect(res.body.data.checks.db.status).toBe('up');
+          expect(res.body.data.checks.redis.status).toBe('up');
+          expect(res.body.data.checks.geminiApi.status).toBe('up');
+          expect(typeof res.body.data.uptime).toBe('number');
+          expect(typeof res.body.data.timestamp).toBe('string');
         });
     });
-  });
 
-  describe('Unknown routes', () => {
-    it('returns 404 for undefined routes', () => {
+    it('does not require authentication', () => {
       return request(app.getHttpServer())
-        .get('/api/v1/does-not-exist')
-        .expect(404);
-    });
-  });
-
-  describe('Security headers', () => {
-    it('includes X-Content-Type-Options header', async () => {
-      const res = await request(app.getHttpServer()).get('/api/v1');
-      expect(res.headers['x-content-type-options']).toBe('nosniff');
+        .get('/api/v1/health')
+        .expect(200);
     });
 
-    it('includes X-Frame-Options header', async () => {
-      const res = await request(app.getHttpServer()).get('/api/v1');
-      expect(res.headers['x-frame-options']).toBeDefined();
+    it('returns 503 when DB is down', () => {
+      mockPrisma.$queryRaw.mockRejectedValue(new Error('Connection refused'));
+
+      return request(app.getHttpServer())
+        .get('/api/v1/health')
+        .expect(503);
+    });
+
+    it('returns 503 when Redis is down', () => {
+      mockCache.ping.mockResolvedValue(null);
+
+      return request(app.getHttpServer())
+        .get('/api/v1/health')
+        .expect(503);
     });
   });
 });

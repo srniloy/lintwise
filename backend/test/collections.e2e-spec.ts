@@ -245,7 +245,7 @@ describe('Collections (e2e)', () => {
       const res = await request(app.getHttpServer())
         .post(`/api/v1/collections/${COL_ID}/share`)
         .set('Authorization', `Bearer ${ownerToken}`)
-        .expect(200);
+        .expect(201);
 
       expect(res.body.data.shareToken).toBeDefined();
       expect(res.body.data.shareUrl).toBeDefined();

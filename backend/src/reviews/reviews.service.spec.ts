@@ -85,6 +85,10 @@ const mockPrisma = {
   issue: {
     createMany: jest.fn(),
   },
+  // Required by assertCanRead — returns null → triggers ForbiddenException for cross-user access
+  teamMember: {
+    findFirst: jest.fn().mockResolvedValue(null),
+  },
   $transaction: jest.fn().mockImplementation((ops: any[]) => Promise.all(ops)),
 };
 

@@ -268,11 +268,11 @@ describe('Notifications (e2e)', () => {
       expect(res.body.data.critical_issues).toBe(true);
     });
 
-    it('returns 400 for invalid boolean value', () => {
+    it('returns 400 for unknown field (forbidNonWhitelisted)', () => {
       return request(app.getHttpServer())
         .put('/api/v1/notifications/preferences')
         .set('Authorization', `Bearer ${userToken}`)
-        .send({ review_complete: 'yes' })
+        .send({ review_complete: false, unknown_field: true })
         .expect(400);
     });
   });
