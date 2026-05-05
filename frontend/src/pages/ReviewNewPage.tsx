@@ -36,36 +36,36 @@ const LANGUAGE_GROUPS: { label: string; options: LangOption[] }[] = [
   {
     label: 'Web',
     options: [
-      { label: 'JavaScript',   value: 'javascript' },
-      { label: 'TypeScript',   value: 'typescript' },
-      { label: 'JSX',          value: 'jsx' },
-      { label: 'TSX',          value: 'tsx' },
-      { label: 'HTML',         value: 'html' },
-      { label: 'CSS',          value: 'css' },
-      { label: 'SCSS / Sass',  value: 'sass' },
-      { label: 'Less',         value: 'less' },
-      { label: 'GraphQL',      value: 'graphql' },
-      { label: 'Svelte',       value: 'svelte' },
+      { label: 'JavaScript', value: 'javascript' },
+      { label: 'TypeScript', value: 'typescript' },
+      { label: 'JSX', value: 'jsx' },
+      { label: 'TSX', value: 'tsx' },
+      { label: 'HTML', value: 'html' },
+      { label: 'CSS', value: 'css' },
+      { label: 'SCSS / Sass', value: 'sass' },
+      { label: 'Less', value: 'less' },
+      { label: 'GraphQL', value: 'graphql' },
+      { label: 'Svelte', value: 'svelte' },
     ],
   },
   {
     label: 'Backend',
     options: [
-      { label: 'Python',   value: 'python' },
-      { label: 'Java',     value: 'java' },
-      { label: 'Go',       value: 'go' },
-      { label: 'Rust',     value: 'rust' },
-      { label: 'C#',       value: 'csharp' },
-      { label: 'PHP',      value: 'php' },
-      { label: 'Ruby',     value: 'ruby' },
-      { label: 'Swift',    value: 'swift' },
-      { label: 'Kotlin',   value: 'kotlin' },
+      { label: 'Python', value: 'python' },
+      { label: 'Java', value: 'java' },
+      { label: 'Go', value: 'go' },
+      { label: 'Rust', value: 'rust' },
+      { label: 'C#', value: 'csharp' },
+      { label: 'PHP', value: 'php' },
+      { label: 'Ruby', value: 'ruby' },
+      { label: 'Swift', value: 'swift' },
+      { label: 'Kotlin', value: 'kotlin' },
     ],
   },
   {
     label: 'Systems',
     options: [
-      { label: 'C',   value: 'c' },
+      { label: 'C', value: 'c' },
       { label: 'C++', value: 'cpp' },
       { label: 'Zig', value: 'zig' },
     ],
@@ -73,54 +73,54 @@ const LANGUAGE_GROUPS: { label: string; options: LangOption[] }[] = [
   {
     label: 'JVM / Functional',
     options: [
-      { label: 'Scala',   value: 'scala' },
-      { label: 'Groovy',  value: 'groovy' },
+      { label: 'Scala', value: 'scala' },
+      { label: 'Groovy', value: 'groovy' },
       { label: 'Clojure', value: 'clojure' },
       { label: 'Haskell', value: 'haskell' },
-      { label: 'Erlang',  value: 'erlang' },
-      { label: 'OCaml',   value: 'ocaml' },
+      { label: 'Erlang', value: 'erlang' },
+      { label: 'OCaml', value: 'ocaml' },
     ],
   },
   {
     label: 'Data & Config',
     options: [
-      { label: 'SQL',        value: 'sql' },
+      { label: 'SQL', value: 'sql' },
       { label: 'PostgreSQL', value: 'pgsql' },
-      { label: 'JSON',       value: 'json' },
-      { label: 'XML',        value: 'xml' },
-      { label: 'YAML',       value: 'yaml' },
-      { label: 'TOML',       value: 'toml' },
-      { label: 'Markdown',   value: 'markdown' },
+      { label: 'JSON', value: 'json' },
+      { label: 'XML', value: 'xml' },
+      { label: 'YAML', value: 'yaml' },
+      { label: 'TOML', value: 'toml' },
+      { label: 'Markdown', value: 'markdown' },
     ],
   },
   {
     label: 'Scripting & Shell',
     options: [
       { label: 'Bash / Shell', value: 'bash' },
-      { label: 'PowerShell',   value: 'powershell' },
-      { label: 'Perl',         value: 'perl' },
-      { label: 'Lua',          value: 'lua' },
-      { label: 'R',            value: 'r' },
-      { label: 'Julia',        value: 'julia' },
+      { label: 'PowerShell', value: 'powershell' },
+      { label: 'Perl', value: 'perl' },
+      { label: 'Lua', value: 'lua' },
+      { label: 'R', value: 'r' },
+      { label: 'Julia', value: 'julia' },
     ],
   },
   {
     label: 'Mobile',
     options: [
-      { label: 'Dart',        value: 'dart' },
+      { label: 'Dart', value: 'dart' },
       { label: 'Objective-C', value: 'objectivec' },
     ],
   },
   {
     label: 'Other',
     options: [
-      { label: 'Dockerfile',  value: 'dockerfile' },
-      { label: 'Nginx',       value: 'nginx' },
-      { label: 'Protobuf',    value: 'protobuf' },
-      { label: 'Solidity',    value: 'solidity' },
+      { label: 'Dockerfile', value: 'dockerfile' },
+      { label: 'Nginx', value: 'nginx' },
+      { label: 'Protobuf', value: 'protobuf' },
+      { label: 'Solidity', value: 'solidity' },
       { label: 'WebAssembly', value: 'wast' },
-      { label: 'Verilog',     value: 'verilog' },
-      { label: 'Diff',        value: 'diff' },
+      { label: 'Verilog', value: 'verilog' },
+      { label: 'Diff', value: 'diff' },
     ],
   },
 ]
@@ -457,7 +457,7 @@ export default function ReviewNewPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="p-8 w-full max-w-480 space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">New Code Review</h1>

@@ -49,42 +49,42 @@ const LANGUAGE_GROUPS: { label: string; options: LangOption[] }[] = [
     options: [
       { label: 'JavaScript', value: 'javascript' },
       { label: 'TypeScript', value: 'typescript' },
-      { label: 'JSX',        value: 'jsx' },
-      { label: 'TSX',        value: 'tsx' },
-      { label: 'HTML',       value: 'html' },
-      { label: 'CSS',        value: 'css' },
-      { label: 'SCSS / Sass',value: 'sass' },
-      { label: 'GraphQL',    value: 'graphql' },
-      { label: 'Svelte',     value: 'svelte' },
+      { label: 'JSX', value: 'jsx' },
+      { label: 'TSX', value: 'tsx' },
+      { label: 'HTML', value: 'html' },
+      { label: 'CSS', value: 'css' },
+      { label: 'SCSS / Sass', value: 'sass' },
+      { label: 'GraphQL', value: 'graphql' },
+      { label: 'Svelte', value: 'svelte' },
     ],
   },
   {
     label: 'Backend',
     options: [
       { label: 'Python', value: 'python' },
-      { label: 'Java',   value: 'java' },
-      { label: 'Go',     value: 'go' },
-      { label: 'Rust',   value: 'rust' },
-      { label: 'C#',     value: 'csharp' },
-      { label: 'PHP',    value: 'php' },
-      { label: 'Ruby',   value: 'ruby' },
-      { label: 'Swift',  value: 'swift' },
+      { label: 'Java', value: 'java' },
+      { label: 'Go', value: 'go' },
+      { label: 'Rust', value: 'rust' },
+      { label: 'C#', value: 'csharp' },
+      { label: 'PHP', value: 'php' },
+      { label: 'Ruby', value: 'ruby' },
+      { label: 'Swift', value: 'swift' },
       { label: 'Kotlin', value: 'kotlin' },
     ],
   },
   {
     label: 'Systems',
     options: [
-      { label: 'C',   value: 'c' },
+      { label: 'C', value: 'c' },
       { label: 'C++', value: 'cpp' },
     ],
   },
   {
     label: 'Data & Config',
     options: [
-      { label: 'SQL',      value: 'sql' },
-      { label: 'JSON',     value: 'json' },
-      { label: 'YAML',     value: 'yaml' },
+      { label: 'SQL', value: 'sql' },
+      { label: 'JSON', value: 'json' },
+      { label: 'YAML', value: 'yaml' },
       { label: 'Markdown', value: 'markdown' },
     ],
   },
@@ -92,15 +92,15 @@ const LANGUAGE_GROUPS: { label: string; options: LangOption[] }[] = [
     label: 'Scripting & Shell',
     options: [
       { label: 'Bash / Shell', value: 'bash' },
-      { label: 'PowerShell',   value: 'powershell' },
+      { label: 'PowerShell', value: 'powershell' },
     ],
   },
   {
     label: 'Other',
     options: [
       { label: 'Dockerfile', value: 'dockerfile' },
-      { label: 'Solidity',   value: 'solidity' },
-      { label: 'Diff',       value: 'diff' },
+      { label: 'Solidity', value: 'solidity' },
+      { label: 'Diff', value: 'diff' },
     ],
   },
 ]
@@ -317,7 +317,7 @@ export default function SnippetsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
+    <div className="p-8 space-y-6 w-full max-w-480">
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>

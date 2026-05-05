@@ -448,7 +448,7 @@ export default function ProfilePage() {
 
   if (isLoading) {
     return (
-      <div className="p-6 max-w-2xl mx-auto space-y-4">
+      <div className="p-8 w-full max-w-480 space-y-4">
         <Skeleton className="h-8 w-40" />
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-64 w-full" />
@@ -458,21 +458,21 @@ export default function ProfilePage() {
 
   if (!profile) {
     return (
-      <div className="p-6 text-center text-muted-foreground">
+      <div className="p-8 text-center text-muted-foreground">
         Could not load profile. Please refresh.
       </div>
     )
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6">
+    <div className="p-8 w-full max-w-480 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Profile Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">Manage your account information and preferences.</p>
       </div>
 
       <Tabs defaultValue="personal">
-        <TabsList className="w-full justify-start overflow-x-auto">
+        <TabsList className="w-full justify-start overflow-x-auto space-x-2">
           <TabsTrigger value="personal" className="flex items-center gap-1.5">
             <User className="h-3.5 w-3.5" />
             Personal Info

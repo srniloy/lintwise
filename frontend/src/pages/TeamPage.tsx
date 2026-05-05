@@ -128,7 +128,7 @@ export default function TeamPage() {
 
   if (!team) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center p-6">
+      <div className="flex min-h-[60vh] items-center justify-center p-8">
         <Card className="w-full max-w-md">
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -167,7 +167,7 @@ export default function TeamPage() {
   // ── Team view ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-6">
+    <div className="w-full max-w-480 space-y-6 p-8">
 
       {/* Header */}
       <div>

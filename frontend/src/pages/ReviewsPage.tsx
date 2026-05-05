@@ -715,7 +715,7 @@ export default function ReviewsPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 p-6">
+    <div className="w-full max-w-480 space-y-5 p-8">
 
       {/* ── Header ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
