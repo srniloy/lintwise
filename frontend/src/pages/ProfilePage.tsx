@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { CheckCircle, Circle, Trash2, User, Lock, Bell, AlertTriangle } from 'lucide-react'
+import { CheckCircle, Circle, Trash2, User, Lock, Bell, AlertTriangle, Crown, Sparkles, FileText, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { authService } from '@/services/authService'
@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge'
 import { Modal, ModalContent, ModalHeader, ModalTitle, ModalDescription, ModalFooter } from '@/components/ui/modal'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { saveBlobAs } from '@/lib/download'
 import type { User as UserType, NotificationPreferences } from '@/types'
 
 // ─── Password strength helpers ────────────────────────────────────────────────
@@ -428,6 +429,213 @@ function DangerZoneTab() {
   )
 }
 
+// ─── Tab: Plan ────────────────────────────────────────────────────────────────
+
+interface Invoice {
+  id: string
+  amount: number
+  currency: string
+  status: 'paid' | 'pending' | 'failed'
+  date: string
+  description: string
+}
+
+function PlanTab({ profile }: { profile: UserType }) {
+  const isPremium = profile.role === 'PREMIUM' || profile.role === 'ADMIN'
+  const [cancelling, setCancelling] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [invoices, setInvoices] = useState<Invoice[]>([])
+  const [invoicesLoading, setInvoicesLoading] = useState(false)
+  const [downloadingId, setDownloadingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isPremium) return
+    setInvoicesLoading(true)
+    api.get<Invoice[]>('/subscription/invoices', { cache: true })
+      .then(setInvoices)
+      .catch(() => { /* silent */ })
+      .finally(() => setInvoicesLoading(false))
+  }, [isPremium])
+
+  async function handleCancel() {
+    setCancelling(true)
+    try {
+      await api.post('/subscription/cancel')
+      toast.success('Plan cancelled. You will be downgraded at the end of the billing period.')
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string }
+      toast.error(apiErr?.message ?? 'Failed to cancel plan. Please try again.')
+    } finally {
+      setCancelling(false)
+      setConfirmOpen(false)
+    }
+  }
+
+  async function handleDownload(invoiceId: string) {
+    setDownloadingId(invoiceId)
+    try {
+      const { blob, filename } = await api.download(`/subscription/invoices/${invoiceId}/pdf`)
+      saveBlobAs(blob, filename)
+      toast.success('Invoice downloaded')
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string }
+      toast.error(apiErr?.message ?? 'Failed to download invoice')
+    } finally {
+      setDownloadingId(null)
+    }
+  }
+
+  if (!isPremium) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Sparkles className="h-5 w-5 text-primary" />
+            Free Plan
+          </CardTitle>
+          <CardDescription>You are currently on the Free plan.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Upgrade to Premium to unlock unlimited reviews, team collaboration, priority support, and more.
+          </p>
+          <Button onClick={() => window.location.href = ROUTES.UPGRADE} className="gap-2">
+            <Crown className="h-4 w-4" />
+            Upgrade to Premium
+          </Button>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Crown className="h-5 w-5 text-primary" />
+            Premium Plan
+          </CardTitle>
+          <CardDescription>You are on the Premium plan.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-foreground">Plan</span>
+              <Badge variant="success">Premium</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Billing</span>
+              <span className="text-sm text-foreground">$20 / year</span>
+            </div>
+            {profile.role === 'PREMIUM' && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Status</span>
+                <Badge variant="success">Active</Badge>
+              </div>
+            )}
+          </div>
+
+          {profile.role === 'PREMIUM' && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+              <p className="text-sm font-medium text-destructive">Cancel Plan</p>
+              <p className="text-xs text-muted-foreground">
+                Your premium features will remain active until the end of the current billing period, after which your account will revert to the Free plan.
+              </p>
+              <Button variant="danger" size="sm" onClick={() => setConfirmOpen(true)}>
+                Cancel Premium Plan
+              </Button>
+            </div>
+          )}
+
+          {profile.role === 'ADMIN' && (
+            <p className="text-xs text-muted-foreground">
+              Administrators automatically have premium access.
+            </p>
+          )}
+        </CardContent>
+
+        <Modal open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <ModalContent>
+            <ModalHeader>
+              <div className="flex items-center gap-2 text-destructive">
+                <AlertTriangle className="h-5 w-5" />
+                <ModalTitle>Cancel Premium Plan?</ModalTitle>
+              </div>
+              <ModalDescription>
+                You will lose access to premium features at the end of the current billing period. This action cannot be undone.
+              </ModalDescription>
+            </ModalHeader>
+            <ModalFooter>
+              <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+                Keep Premium
+              </Button>
+              <Button variant="danger" loading={cancelling} onClick={handleCancel}>
+                Yes, Cancel Plan
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      </Card>
+
+      {/* Invoices */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <FileText className="h-5 w-5 text-muted-foreground" />
+            Invoices
+          </CardTitle>
+          <CardDescription>View and download your payment receipts.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {invoicesLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : invoices.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No invoices yet.</p>
+          ) : (
+            <div className="divide-y divide-border">
+              {invoices.map((inv) => (
+                <div key={inv.id} className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium text-foreground">{inv.description}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{new Date(inv.date).toLocaleDateString()}</span>
+                      <span>·</span>
+                      <span>{inv.currency.toUpperCase()} {inv.amount.toFixed(2)}</span>
+                      <span>·</span>
+                      <Badge
+                        variant={
+                          inv.status === 'paid' ? 'success' :
+                          inv.status === 'pending' ? 'medium' : 'critical'
+                        }
+                        className="capitalize"
+                      >
+                        {inv.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    loading={downloadingId === inv.id}
+                    onClick={() => handleDownload(inv.id)}
+                    aria-label={`Download invoice for ${inv.description}`}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 // ─── ProfilePage ──────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
@@ -485,6 +693,10 @@ export default function ProfilePage() {
             <Bell className="h-3.5 w-3.5" />
             Notifications
           </TabsTrigger>
+          <TabsTrigger value="plan" className="flex items-center gap-1.5">
+            <Crown className="h-3.5 w-3.5" />
+            Plan
+          </TabsTrigger>
           <TabsTrigger value="danger" className="flex items-center gap-1.5 text-destructive data-[state=active]:text-destructive">
             <AlertTriangle className="h-3.5 w-3.5" />
             Danger Zone
@@ -501,6 +713,10 @@ export default function ProfilePage() {
 
         <TabsContent value="notifications">
           <NotificationPrefsTab />
+        </TabsContent>
+
+        <TabsContent value="plan">
+          <PlanTab profile={profile} />
         </TabsContent>
 
         <TabsContent value="danger">

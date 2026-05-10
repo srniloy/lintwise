@@ -27,6 +27,7 @@ const ReviewStatusPage    = lazy(() => import('@/pages/ReviewStatusPage'))
 const SnippetsPage        = lazy(() => import('@/pages/SnippetsPage'))
 const CollectionsPage     = lazy(() => import('@/pages/CollectionsPage'))
 const ProfilePage         = lazy(() => import('@/pages/ProfilePage'))
+const UpgradePage         = lazy(() => import('@/pages/UpgradePage'))
 const TeamPage            = lazy(() => import('@/pages/TeamPage'))
 const TeamAcceptPage      = lazy(() => import('@/pages/TeamAcceptPage'))
 const AdminPage           = lazy(() => import('@/pages/AdminPage'))
@@ -84,6 +85,7 @@ export default function App() {
                   <Route path={ROUTES.SNIPPETS}    element={<ErrorBoundary><SnippetsPage /></ErrorBoundary>} />
                   <Route path={ROUTES.COLLECTIONS} element={<ErrorBoundary><CollectionsPage /></ErrorBoundary>} />
                   <Route path={ROUTES.PROFILE}     element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
+                  <Route path={ROUTES.UPGRADE}    element={<ErrorBoundary><UpgradePage /></ErrorBoundary>} />
 
                   {/* Premium only */}
                   <Route element={<RoleGuard allowedRoles={['PREMIUM', 'ADMIN']} />}>

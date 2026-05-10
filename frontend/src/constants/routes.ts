@@ -17,6 +17,7 @@ export const ROUTES = {
   PROFILE: '/profile',
 
   // Premium
+  UPGRADE: '/upgrade',
   TEAM: '/team',
   TEAM_ACCEPT: '/team/accept',
 

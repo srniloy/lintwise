@@ -9,9 +9,9 @@
 This document provides a comprehensive overview of all functional and non-functional requirements for the **LintWise** AI-Powered Code Review Tool. The requirements have been structured according to industry-standard practices and serve as the foundation for development, testing, and validation.
 
 **Total Requirements:**
-- **Functional Requirements**: 40+ (across 8 categories)
+- **Functional Requirements**: 46+ (across 9 categories)
 - **Non-Functional Requirements**: 50+ (across 10 categories)
-- **Total API Endpoints**: 25+
+- **Total API Endpoints**: 30+
 - **User Roles**: 3 (USER, PREMIUM, ADMIN)
 
 ---
@@ -133,6 +133,34 @@ This document provides a comprehensive overview of all functional and non-functi
 - Redis connectivity check
 - Gemini API availability check
 - System uptime metrics
+
+---
+
+### 9️⃣ Premium Subscription & Payments (6 Requirements)
+| ID | Feature | Priority | Status |
+|---|---------|----------|--------|
+| FR9.1 | Plan Selection & Upgrade UI | HIGH | Planned |
+| FR9.2 | Stripe Payment Integration | CRITICAL | Planned |
+| FR9.3 | Invoice Generation & History | HIGH | Planned |
+| FR9.4 | Plan Cancellation | HIGH | Planned |
+| FR9.5 | Role Upgrade/Downgrade on Payment Event | CRITICAL | Planned |
+| FR9.6 | Invoice PDF Download | MEDIUM | Planned |
+
+**Key Acceptance Criteria:**
+- Two plans: Free ($0) and Premium ($20/year)
+- Premium plan includes: unlimited reviews, unlimited snippets, team collaboration, priority support
+- Free plan includes: 10 reviews/month, 50 snippets, single user
+- Payment processed via Stripe (card payments)
+- Invoice generated on successful payment (PDF downloadable)
+- User role upgraded to PREMIUM immediately after successful payment
+- Plan cancellation takes effect at end of current billing period
+- Cancel confirmation dialog with warning about feature loss
+- Invoice history visible in Profile → Plan tab
+- API endpoints: `GET /subscription/invoices`, `GET /subscription/invoices/:id/pdf`, `POST /subscription/cancel`
+
+**Frontend Pages:**
+- `/upgrade` — Public plan comparison page (Free vs Premium cards)
+- Profile → Plan tab — Current plan details, invoice history, cancel action
 
 ---
 
@@ -334,6 +362,18 @@ FR2.1 (Submit Code)
   → FR2.3 (Results Display)
 ```
 
+### Premium Subscription Flow
+```
+FR9.1 (Plan Selection UI)
+  → FR9.2 (Stripe Payment)
+  → FR9.5 (Role Upgrade)
+  → FR9.3 (Invoice Generation)
+  → FR9.6 (Invoice PDF Download)
+
+FR9.4 (Plan Cancellation)
+  → FR9.5 (Role Downgrade at term end)
+```
+
 ### Data Protection Flow
 ```
 NFR4.2 (Data Protection)
@@ -350,9 +390,9 @@ NFR4.2 (Data Protection)
 ### By User Role
 | Role | Required Features | Premium Features |
 |------|------------------|------------------|
-| **USER** | FR1, FR2, FR5.1, FR6.1 | None |
-| **PREMIUM** | All USER + FR4, FR6.2 | Team collaboration, webhooks, API access |
-| **ADMIN** | All + user management | System configuration, billing, analytics |
+| **USER** | FR1, FR2, FR5.1, FR6.1, FR9.1 | None. Can view/upgrade to Premium via `/upgrade` |
+| **PREMIUM** | All USER + FR4, FR6.2, FR9.3, FR9.4, FR9.6 | Team collaboration, webhooks, API access, unlimited reviews, invoice download |
+| **ADMIN** | All + user management | System configuration, billing, analytics — all premium features included |
 
 ### By Feature Category
 | Category | Total Requirements | Coverage % | Status |
@@ -365,6 +405,7 @@ NFR4.2 (Data Protection)
 | API & Integration | 2 | 100% | Pending |
 | Notifications | 2 | 100% | Pending |
 | Monitoring | 1 | 100% | Pending |
+| Premium Subscription | 6 | 100% | Pending |
 
 ---
 
@@ -385,9 +426,10 @@ NFR4.2 (Data Protection)
 - Advanced NFR (Scalability, Monitoring)
 
 ### Phase 3 - Premium Features
-**Duration**: 6 weeks
+**Duration**: 8 weeks
 - FR4: Team Collaboration (complete)
 - FR6.2: Webhooks (complete)
+- FR9: Premium Subscription & Payments (complete)
 - Enterprise NFR (Compliance, SLA)
 
 ---
@@ -429,6 +471,7 @@ NFR4.2 (Data Protection)
 | **NFR3.1 (Availability)** | Single point of failure | Multi-region deployment, redundancy |
 | **NFR4.2 (Data Protection)** | Security breach | Encryption, access control, auditing |
 | **NFR2.1 (Scalability)** | Database performance | Indexing, partitioning, replication |
+| **FR9.2 (Stripe Payment)** | Payment processing failure | Idempotency keys, webhook retry, manual reconciliation |
 
 ---
 

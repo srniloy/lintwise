@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Zap,
   X,
+  Sparkles,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
@@ -24,6 +25,7 @@ interface NavItem {
   icon: React.ReactNode
   premiumOnly?: boolean
   adminOnly?: boolean
+  userOnly?: boolean
 }
 
 const navItems: NavItem[] = [
@@ -32,6 +34,7 @@ const navItems: NavItem[] = [
   { label: 'Reviews',     to: ROUTES.REVIEWS,     icon: <History size={18} /> },
   { label: 'Snippets',    to: ROUTES.SNIPPETS,    icon: <Code2 size={18} /> },
   { label: 'Collections', to: ROUTES.COLLECTIONS, icon: <FolderOpen size={18} /> },
+  { label: 'Upgrade',     to: ROUTES.UPGRADE,     icon: <Sparkles size={18} />, userOnly: true },
   { label: 'Team',        to: ROUTES.TEAM,        icon: <Users size={18} />, premiumOnly: true },
   { label: 'Admin',       to: ROUTES.ADMIN,       icon: <ShieldCheck size={18} />, adminOnly: true },
   { label: 'Profile',     to: ROUTES.PROFILE,     icon: <User size={18} /> },
@@ -49,6 +52,7 @@ export default function Sidebar({ mobileSidebarOpen, onMobileClose }: SidebarPro
   const visibleItems = navItems.filter((item) => {
     if (item.adminOnly) return isAdmin
     if (item.premiumOnly) return isPremium
+    if (item.userOnly) return !isPremium
     return true
   })
 
