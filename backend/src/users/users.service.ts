@@ -19,6 +19,8 @@ export type SafeUser = {
   role: string;
   avatarUrl: string | null;
   isVerified: boolean;
+  subscriptionEndDate: Date | null;
+  cancelAtPeriodEnd: boolean;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -39,6 +41,8 @@ export class UsersService {
     role: string;
     avatarUrl: string | null;
     isVerified: boolean;
+    subscriptionEndDate: Date | null;
+    cancelAtPeriodEnd: boolean;
     createdAt: Date;
     updatedAt: Date;
   }): SafeUser {
@@ -49,6 +53,8 @@ export class UsersService {
       role: user.role,
       avatarUrl: user.avatarUrl,
       isVerified: user.isVerified,
+      subscriptionEndDate: user.subscriptionEndDate,
+      cancelAtPeriodEnd: user.cancelAtPeriodEnd,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

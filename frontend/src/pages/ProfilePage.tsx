@@ -441,8 +441,11 @@ interface Invoice {
 }
 
 function PlanTab({ profile }: { profile: UserType }) {
+  const setUser = useAuthStore((s) => s.setUser)
   const isPremium = profile.role === 'PREMIUM' || profile.role === 'ADMIN'
+  const isScheduledForCancel = profile.cancelAtPeriodEnd === true
   const [cancelling, setCancelling] = useState(false)
+  const [resubscribing, setResubscribing] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [invoicesLoading, setInvoicesLoading] = useState(false)
@@ -451,7 +454,7 @@ function PlanTab({ profile }: { profile: UserType }) {
   useEffect(() => {
     if (!isPremium) return
     setInvoicesLoading(true)
-    api.get<Invoice[]>('/subscription/invoices', { cache: true })
+    api.get<Invoice[]>('/subscriptions/invoices', { cache: true })
       .then(setInvoices)
       .catch(() => { /* silent */ })
       .finally(() => setInvoicesLoading(false))
@@ -460,21 +463,42 @@ function PlanTab({ profile }: { profile: UserType }) {
   async function handleCancel() {
     setCancelling(true)
     try {
-      await api.post('/subscription/cancel')
-      toast.success('Plan cancelled. You will be downgraded at the end of the billing period.')
+      const data = await api.post<{
+        message: string
+        subscriptionEndDate: string
+        user: UserType
+      }>('/subscriptions/cancel')
+      setUser(data.user)
+      toast.success(data.message)
+      window.location.reload()
     } catch (err: unknown) {
       const apiErr = err as { message?: string }
-      toast.error(apiErr?.message ?? 'Failed to cancel plan. Please try again.')
+      toast.error(apiErr?.message ?? 'Failed to cancel subscription. Please try again.')
     } finally {
       setCancelling(false)
       setConfirmOpen(false)
     }
   }
 
+  async function handleResubscribe() {
+    setResubscribing(true)
+    try {
+      const data = await api.post<{ message: string; user: UserType }>('/subscriptions/resubscribe')
+      setUser(data.user)
+      toast.success(data.message)
+      window.location.reload()
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string }
+      toast.error(apiErr?.message ?? 'Failed to resubscribe. Please try again.')
+    } finally {
+      setResubscribing(false)
+    }
+  }
+
   async function handleDownload(invoiceId: string) {
     setDownloadingId(invoiceId)
     try {
-      const { blob, filename } = await api.download(`/subscription/invoices/${invoiceId}/pdf`)
+      const { blob, filename } = await api.download(`/subscriptions/invoices/${invoiceId}/pdf`)
       saveBlobAs(blob, filename)
       toast.success('Invoice downloaded')
     } catch (err: unknown) {
@@ -536,14 +560,37 @@ function PlanTab({ profile }: { profile: UserType }) {
             )}
           </div>
 
-          {profile.role === 'PREMIUM' && (
+          {profile.role === 'PREMIUM' && !isScheduledForCancel && (
             <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-2">
-              <p className="text-sm font-medium text-destructive">Cancel Plan</p>
+              <p className="text-sm font-medium text-destructive">Cancel Subscription</p>
               <p className="text-xs text-muted-foreground">
                 Your premium features will remain active until the end of the current billing period, after which your account will revert to the Free plan.
               </p>
               <Button variant="danger" size="sm" onClick={() => setConfirmOpen(true)}>
-                Cancel Premium Plan
+                Cancel Subscription
+              </Button>
+            </div>
+          )}
+
+          {profile.role === 'PREMIUM' && isScheduledForCancel && (
+            <div className="rounded-lg border border-border bg-muted/50 p-4 space-y-2">
+              <p className="text-sm font-medium text-foreground">Cancellation Scheduled</p>
+              <p className="text-xs text-muted-foreground">
+                {profile.subscriptionEndDate ? (
+                  <>Your premium access ends on{' '}
+                    <span className="font-medium text-foreground">
+                      {new Date(profile.subscriptionEndDate).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </span>. After this date your account will revert to the Free plan.</>
+                ) : (
+                  'Your premium features will remain active until the end of the current billing period, after which your account will revert to the Free plan.'
+                )}
+              </p>
+              <Button variant="outline" size="sm" loading={resubscribing} onClick={handleResubscribe}>
+                Resubscribe
               </Button>
             </div>
           )}
@@ -560,18 +607,18 @@ function PlanTab({ profile }: { profile: UserType }) {
             <ModalHeader>
               <div className="flex items-center gap-2 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
-                <ModalTitle>Cancel Premium Plan?</ModalTitle>
+                <ModalTitle>Cancel Subscription?</ModalTitle>
               </div>
               <ModalDescription>
-                You will lose access to premium features at the end of the current billing period. This action cannot be undone.
+                Your premium features will remain active until the end of the current billing period, after which your account will revert to the Free plan. This action can be undone by resubscribing before the end date.
               </ModalDescription>
             </ModalHeader>
             <ModalFooter>
               <Button variant="outline" onClick={() => setConfirmOpen(false)}>
-                Keep Premium
+                Keep Subscription
               </Button>
               <Button variant="danger" loading={cancelling} onClick={handleCancel}>
-                Yes, Cancel Plan
+                Yes, Cancel Subscription
               </Button>
             </ModalFooter>
           </ModalContent>
@@ -609,7 +656,7 @@ function PlanTab({ profile }: { profile: UserType }) {
                       <Badge
                         variant={
                           inv.status === 'paid' ? 'success' :
-                          inv.status === 'pending' ? 'medium' : 'critical'
+                            inv.status === 'pending' ? 'medium' : 'critical'
                         }
                         className="capitalize"
                       >
@@ -639,20 +686,24 @@ function PlanTab({ profile }: { profile: UserType }) {
 // ─── ProfilePage ──────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
-  const storeUser = useAuthStore((s) => s.user)
+  const setUser = useAuthStore((s) => s.setUser)
   const [profile, setProfile] = useState<UserType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const isPremium = profile?.role === 'PREMIUM' || profile?.role === 'ADMIN'
 
   useEffect(() => {
     authService.getProfile()
-      .then((data) => setProfile(data))
+      .then((data) => {
+        setProfile(data)
+        setUser(data)
+      })
       .catch(() => {
-        // Fall back to store data if API fails
-        if (storeUser) setProfile(storeUser)
+        const fallback = useAuthStore.getState().user
+        if (fallback) setProfile(fallback)
         else toast.error('Failed to load profile')
       })
       .finally(() => setIsLoading(false))
-  }, [storeUser])
+  }, [setUser])
 
   if (isLoading) {
     return (
@@ -693,10 +744,12 @@ export default function ProfilePage() {
             <Bell className="h-3.5 w-3.5" />
             Notifications
           </TabsTrigger>
-          <TabsTrigger value="plan" className="flex items-center gap-1.5">
-            <Crown className="h-3.5 w-3.5" />
-            Plan
-          </TabsTrigger>
+          {isPremium && (
+            <TabsTrigger value="plan" className="flex items-center gap-1.5">
+              <Crown className="h-3.5 w-3.5" />
+              Plan
+            </TabsTrigger>
+          )}
           <TabsTrigger value="danger" className="flex items-center gap-1.5 text-destructive data-[state=active]:text-destructive">
             <AlertTriangle className="h-3.5 w-3.5" />
             Danger Zone
@@ -715,9 +768,11 @@ export default function ProfilePage() {
           <NotificationPrefsTab />
         </TabsContent>
 
-        <TabsContent value="plan">
-          <PlanTab profile={profile} />
-        </TabsContent>
+        {isPremium && (
+          <TabsContent value="plan">
+            <PlanTab profile={profile} />
+          </TabsContent>
+        )}
 
         <TabsContent value="danger">
           <DangerZoneTab />

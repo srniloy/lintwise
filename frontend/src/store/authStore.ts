@@ -13,6 +13,7 @@ interface AuthStore {
   register: (credentials: RegisterCredentials) => Promise<void>
   logout: () => Promise<void>
   setUser: (user: User) => void
+  setTokens: (accessToken: string, refreshToken: string) => void
   clearAuth: () => void
 }
 
@@ -59,6 +60,8 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       setUser: (user) => set({ user }),
+
+      setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
 
       clearAuth: () =>
         set({

@@ -6,6 +6,8 @@ export interface User {
   email: string
   role: UserRole
   avatarUrl?: string
+  subscriptionEndDate?: string | null
+  cancelAtPeriodEnd?: boolean
   createdAt: string
 }
 

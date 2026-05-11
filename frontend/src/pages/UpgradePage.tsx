@@ -1,8 +1,13 @@
-import { Crown, Sparkles, Zap, Check, ArrowRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { Crown, Sparkles, Zap, Check, ArrowRight, Loader2 } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/hooks/useAuth'
+import { useAuthStore } from '@/store/authStore'
+import { authService } from '@/services/authService'
+import { api } from '@/services/apiClient'
 import { toast } from 'sonner'
 
 interface PlanFeature {
@@ -29,11 +34,72 @@ const PREMIUM_PLAN: PlanFeature[] = [
 ]
 
 export default function UpgradePage() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const isPremium = user?.role === 'PREMIUM' || user?.role === 'ADMIN'
+  const [loading, setLoading] = useState(false)
+  const [searchParams] = useSearchParams()
 
-  function handleUpgrade() {
-    toast.info('Premium purchase flow coming soon!')
+  const setUser = useAuthStore((s) => s.setUser)
+  const setTokens = useAuthStore((s) => s.setTokens)
+
+  useEffect(() => {
+    if (searchParams.get('success') !== '1') return
+    toast.success('Payment successful! Welcome to Premium.')
+
+    const sessionId = searchParams.get('session_id')
+
+    async function confirm() {
+      if (sessionId) {
+        try {
+          const data = await api.post<{ role: string; accessToken: string; refreshToken: string }>(
+            '/subscriptions/confirm-checkout',
+            { sessionId },
+          )
+          setTokens(data.accessToken, data.refreshToken)
+        } catch {
+          // fall through to polling
+        }
+      }
+
+      let attempts = 0
+      const maxAttempts = 10
+      function poll() {
+        authService.getProfile()
+          .then((profile) => {
+            setUser(profile)
+            if (profile.role !== 'USER') {
+              navigate('/profile', { replace: true })
+            } else if (++attempts < maxAttempts) {
+              setTimeout(poll, 1500)
+            }
+          })
+          .catch(() => {
+            if (++attempts < maxAttempts) setTimeout(poll, 1500)
+          })
+      }
+      poll()
+    }
+    confirm()
+  }, [searchParams, setUser, navigate])
+
+  async function handleUpgrade() {
+    setLoading(true)
+    try {
+      const { url } = await api.post<{ url: string }>('/subscriptions/create-checkout-session', {})
+      window.location.href = url
+    } catch (err: unknown) {
+      const msg = (err as { message?: string }).message ?? ''
+      if (msg.includes('Failed to fetch')) {
+        toast.error('Backend server is not running. Please start the API server and try again.')
+      } else if (msg.includes('not configured')) {
+        toast.error('Stripe is not configured on the server.')
+      } else {
+        toast.error(msg || 'Failed to start checkout. Please try again.')
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -122,9 +188,9 @@ export default function UpgradePage() {
                 Current Plan
               </Badge>
             ) : (
-              <Button className="w-full gap-2" onClick={handleUpgrade}>
-                Upgrade Now
-                <ArrowRight className="h-4 w-4" />
+              <Button className="w-full gap-2" onClick={handleUpgrade} loading={loading}>
+                {loading ? 'Redirecting...' : 'Upgrade Now'}
+                {!loading && <ArrowRight className="h-4 w-4" />}
               </Button>
             )}
           </CardFooter>
