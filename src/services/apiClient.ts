@@ -146,7 +146,7 @@ async function download(endpoint: string): Promise<{ blob: Blob; filename: strin
 // ── Public API ────────────────────────────────────────────────────────────────
 export const api = {
   /** GET with optional 5-minute cache. Pass `{ cache: true }` to enable. */
-  get: <T>(endpoint: string, options?: RequestInit & { cache?: boolean }) => {
+  get: <T>(endpoint: string, options?: Omit<RequestInit, 'cache'> & { cache?: boolean }) => {
     const { cache = false, ...rest } = options ?? {}
     return request<T>(endpoint, { method: 'GET', ...rest }, cache)
   },
