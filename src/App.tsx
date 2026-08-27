@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
 import { useThemeStore } from '@/store/themeStore'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -31,6 +31,7 @@ const UpgradePage         = lazy(() => import('@/pages/UpgradePage'))
 const TeamPage            = lazy(() => import('@/pages/TeamPage'))
 const TeamAcceptPage      = lazy(() => import('@/pages/TeamAcceptPage'))
 const AdminPage           = lazy(() => import('@/pages/AdminPage'))
+const HomePage            = lazy(() => import('@/pages/HomePage'))
 const NotFoundPage        = lazy(() => import('@/pages/NotFoundPage'))
 
 function PageLoader() {
@@ -59,8 +60,8 @@ export default function App() {
         <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>
             <Routes>
-              {/* Root → redirect based on auth is handled in PublicLayout / ProtectedRoute */}
-              <Route path="/" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
+              {/* Root → public marketing homepage */}
+              <Route path="/" element={<ErrorBoundary><HomePage /></ErrorBoundary>} />
 
               {/* Public routes — redirect to dashboard if already authed */}
               <Route element={<PublicLayout />}>

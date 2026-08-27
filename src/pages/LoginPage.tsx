@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, User, ShieldCheck, Crown, ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/store/authStore'
 import { ROUTES } from '@/constants/routes'
@@ -11,6 +11,13 @@ import { cn } from '@/lib/utils'
 
 const MAX_ATTEMPTS = 5
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000 // 15 minutes
+
+// ─── Quick demo logins (auto-login) ───────────────────────────────────────────
+const DEMO_USERS = [
+  { label: 'Premium User', email: 'john@gmail.com', password: 'Ab@112233', icon: Crown },
+  { label: 'Regular User', email: 'jane@gmail.com', password: 'Ab@112233', icon: User },
+  { label: 'Admin', email: 'admin@gmail.com', password: 'Ab@112233', icon: ShieldCheck },
+] as const
 
 function formatCountdown(ms: number): string {
   const totalSeconds = Math.ceil(ms / 1000)
@@ -30,6 +37,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [fieldError, setFieldError] = useState<string | null>(null)
+  const [quickLoading, setQuickLoading] = useState<string | null>(null)
 
   // Lockout state
   const [failedAttempts, setFailedAttempts] = useState(0)
@@ -38,6 +46,21 @@ export default function LoginPage() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const isLocked = lockedUntil !== null && countdown > 0
+
+  async function quickLogin(email: string, password: string) {
+    if (isLocked) return
+    setQuickLoading(email)
+    try {
+      await login({ email, password, rememberMe: true })
+      toast.success('Welcome back!')
+      navigate(from, { replace: true })
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string }
+      toast.error(apiErr?.message ?? 'Quick login failed. Please try again.')
+    } finally {
+      setQuickLoading(null)
+    }
+  }
 
   // Countdown ticker
   useEffect(() => {
@@ -96,13 +119,68 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-xl">
+        <Link
+          to={ROUTES.HOME}
+          className="flex items-center gap-1.5 px-6 pt-6 text-sm text-muted-foreground transition-colors hover:text-primary"
+        >
+          <ArrowLeft className="size-4" />
+          Back to home
+        </Link>
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Welcome back</CardTitle>
           <CardDescription>Sign in to your LintWise account</CardDescription>
         </CardHeader>
 
         <CardContent>
+          {/* Quick demo login (auto-login) */}
+          <div className="mb-6 space-y-3">
+            <p className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Quick Demo Login
+            </p>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {DEMO_USERS.map((cred) => {
+                const Icon = cred.icon
+                const loading = quickLoading === cred.email
+                return (
+                  <button
+                    key={cred.email}
+                    type="button"
+                    disabled={isLocked || quickLoading !== null}
+                    onClick={() => quickLogin(cred.email, cred.password)}
+                    className={cn(
+                      'flex items-center gap-2 rounded-lg border border-input bg-background px-3 py-2.5',
+                      'text-left transition-colors hover:border-primary/40 hover:bg-accent',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      'disabled:pointer-events-none disabled:opacity-50',
+                    )}
+                  >
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      {loading ? (
+                        <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : (
+                        <Icon className="size-4" />
+                      )}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold">{cred.label}</span>
+                      <span className="block truncate text-xs text-muted-foreground">{cred.email}</span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">Or continue with email</span>
+            </div>
+          </div>
+
           {/* Lockout banner */}
           {isLocked && (
             <div className="mb-4 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3">

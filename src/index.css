@@ -73,34 +73,34 @@
   --ring:                oklch(0.49 0.22 264);
 }
 
-/* ─── Dark theme ─────────────────────────────────────────────── */
+/* ─── Dark theme (softened — lifted off pure black) ──────────── */
 .dark {
-  --background:          oklch(0.1 0 0);
+  --background:          #161616;
   --foreground:          oklch(0.98 0 0);
 
-  --card:                oklch(0.14 0 0);
+  --card:                #242424;
   --card-foreground:     oklch(0.98 0 0);
 
-  --popover:             oklch(0.14 0 0);
+  --popover:             #242424;
   --popover-foreground:  oklch(0.98 0 0);
 
   --primary:             oklch(0.62 0.22 264);
   --primary-foreground:  oklch(0.1 0 0);
 
-  --secondary:           oklch(0.2 0 0);
+  --secondary:           #242424;
   --secondary-foreground: oklch(0.98 0 0);
 
-  --muted:               oklch(0.2 0 0);
-  --muted-foreground:    oklch(0.6 0 0);
+  --muted:               #1c1c1c;
+  --muted-foreground:    oklch(0.62 0 0);
 
-  --accent:              oklch(0.2 0 0);
+  --accent:              #242424;
   --accent-foreground:   oklch(0.98 0 0);
 
   --destructive:         oklch(0.6 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
 
-  --border:              oklch(0.22 0 0);
-  --input:               oklch(0.22 0 0);
+  --border:              #2a2a2a;
+  --input:               #2a2a2a;
   --ring:                oklch(0.62 0.22 264);
 }
 
