@@ -3,6 +3,41 @@ import { toast } from 'sonner'
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api/v1'
 
+// Endpoints that manage auth themselves. A 401 here is a normal, user-facing
+// auth failure (e.g. wrong password) and must NOT trigger a global logout or
+// a hard page reload — the calling form displays the error instead.
+const AUTH_ENDPOINTS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/refresh',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+  '/auth/verify-email',
+  '/auth/resend-verification',
+]
+
+// Registered by the app (inside the Router) so a session-expired 401 can be
+// handled with a client-side redirect instead of a full page reload.
+type UnauthorizedHandler = () => void
+let unauthorizedHandler: UnauthorizedHandler | null = null
+
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null) {
+  unauthorizedHandler = handler
+}
+
+function handleUnauthorized() {
+  try {
+    localStorage.removeItem('lintwise-auth')
+  } catch {
+    /* ignore */
+  }
+  if (unauthorizedHandler) {
+    unauthorizedHandler()
+  } else if (!window.location.pathname.startsWith('/login')) {
+    window.location.href = '/login'
+  }
+}
+
 // ── GET response cache (5-minute TTL) ─────────────────────────────────────────
 const CACHE_TTL_MS = 5 * 60 * 1000
 
@@ -74,8 +109,8 @@ async function request<T>(
     }
 
     if (res.status === 401) {
-      localStorage.removeItem('lintwise-auth')
-      window.location.href = '/login'
+      const isAuthCall = AUTH_ENDPOINTS.some((e) => endpoint.includes(e))
+      if (!isAuthCall) handleUnauthorized()
     } else if (res.status === 429) {
       const retryAfter = res.headers.get('retry-after')
       const wait = retryAfter ? ` Retry in ${retryAfter}s.` : ''
@@ -119,8 +154,7 @@ async function download(endpoint: string): Promise<{ blob: Blob; filename: strin
 
   if (!res.ok) {
     if (res.status === 401) {
-      localStorage.removeItem('lintwise-auth')
-      window.location.href = '/login'
+      handleUnauthorized()
     } else if (res.status === 429) {
       toast.error('Rate limit exceeded. Please wait before downloading again.')
     } else if (res.status >= 500) {

@@ -1,7 +1,9 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
 import { useThemeStore } from '@/store/themeStore'
+import { useAuthStore } from '@/store/authStore'
+import { setUnauthorizedHandler } from '@/services/apiClient'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/toast'
 import { Spinner } from '@/components/ui/spinner'
@@ -52,10 +54,26 @@ function ThemeInitializer() {
   return null
 }
 
+// Registers a 401 handler that performs a client-side redirect to /login
+// instead of a hard page reload, so the app never abruptly refreshes on an
+// unauthorized response.
+function UnauthorizedRegistrar() {
+  const navigate = useNavigate()
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      useAuthStore.getState().clearAuth()
+      navigate(ROUTES.LOGIN, { replace: true })
+    })
+    return () => setUnauthorizedHandler(null)
+  }, [navigate])
+  return null
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <ThemeInitializer />
+      <UnauthorizedRegistrar />
       <TooltipProvider delayDuration={300}>
         <ErrorBoundary>
           <Suspense fallback={<PageLoader />}>

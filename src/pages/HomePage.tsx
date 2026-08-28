@@ -411,7 +411,7 @@ function HeroSection({ isAuthenticated }: { isAuthenticated: boolean }) {
         </div>
 
         {/* Review mockup */}
-        <div className="relative animate-in fade-in slide-in-from-bottom-8 duration-700 lg:h-[520px]">
+        <div className="relative flex animate-in fade-in slide-in-from-bottom-8 duration-700 items-center">
           <ReviewMockup />
         </div>
       </div>
